@@ -1,0 +1,29 @@
+{
+  "name": "express-basics",
+  "version": "1.0.0",
+  "description": "learning expressjs basics",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rahulstech/node-express-basics.git"
+  },
+  "keywords": [
+    "node",
+    "express",
+    "nodejs",
+    "expressjs"
+  ],
+  "author": "Rahul Bagchi",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/rahulstech/node-express-basics/issues"
+  },
+  "homepage": "https://github.com/rahulstech/node-express-basics#readme",
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
