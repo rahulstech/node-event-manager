@@ -1,6 +1,9 @@
 node_modules/
 .git/
-.env
+
 eventmanager/uploads/
 multer-tutorial/uploads/
+winston-tutorial/logs/
+
 package-lock.json
+
