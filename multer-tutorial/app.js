@@ -8,6 +8,9 @@
  *    and i run script from here with 'node app/index.js". then __dirname = /home/user/node-example/app/ and process.cwd() = /home/user/node-example.
  *    NOTE: path.resolve('media') will resolve it using process.cwd() but path.resolve(__dirname, 'media') with resolve it using __dirname
  * 
+ * 3. cURL fileupoad: in cURL 'fieldname=@/path/to/file/example.ext' will upload the file example.ext.
+ *    NOTE: `@` before the pathname of the file, it is important and denotes that this is the path of the file to upload. without it the value is considered as plain text.
+ *    example: curl -X POST -F "image=@/home/user/Picture/flowers.jpg" 'http://example.com/upload'
  * 
  * 
  * 
