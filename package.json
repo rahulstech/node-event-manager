@@ -6,7 +6,6 @@
   "type": "commonjs",
   "scripts": {
     "eventmanager": "node --watch-path=eventmanager/src --watch=eventmanager/.env --env-file-if-exists=eventmanager/.env eventmanager/src/app.js",
-    "multer-tutorial": "node multer-tutorial/app.js",
     "winston-tutorial": "node winston-tutorial/app.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
