@@ -1,7 +1,7 @@
 const { errorcodes, EventDB, EventDBError } = require('../database/eventsdb')
 const multer = require('multer')
 const utils = require('../utils')
-const loggers = require('../loggers.js')
+const loggers = require('../loggers')
 
 const logger = loggers.logger.child({ module: 'EventRoutes' })
 
@@ -85,7 +85,7 @@ const getCreateEventMiddleWares = () => {
     return multer().none()
 }
 
-const createEvent = (req, res) => {
+const createEvent = async (req, res) => {
 
     // step1: invalidate inputs: all the title, organizer, venu, description, start, end must be set.
     //        check start and end is a valid date time string in format yyyy-MM-dd HH:mm
@@ -125,7 +125,7 @@ const createEvent = (req, res) => {
 
     // step2: add the event to database
     try {
-        const newEvent = eventdb.createEvent({ title, organizer, venu, description, start: startDateTime, end: endDateTime, status: eventCurrentStatus })
+        const newEvent = await eventdb.createEvent({ title, organizer, venu, description, start: startDateTime, end: endDateTime, status: eventCurrentStatus })
 
         logger.info('new event saved successfully')
         logger.debug('new event = ', { debugExtras: newEvent })
@@ -145,7 +145,7 @@ const getUpdateEventMiddleWares = () => {
     return multer().none()
 }
 
-const updateEvent = (req, res) => {
+const updateEvent = async (req, res) => {
     const { eventId } = req.params
 
     logger.info(`called updateEvent() and eventId = ${eventId}`)
@@ -180,7 +180,7 @@ const updateEvent = (req, res) => {
         const input = { title, organizer, venu, description, 
             start: startDatetime, end: endDatetime, status }
 
-        const event = eventdb.updateEvent(_id, input)
+        const event = await eventdb.updateEvent(_id, input)
 
         logger.info(`event with id ${eventId} updated successfully`)
         logger.debug(`updated event = `, { debugExtras: event })

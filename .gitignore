@@ -4,6 +4,7 @@ node_modules/
 eventmanager/.env
 eventmanager/uploads/
 eventmanager/logs/
+eventmanager/datastore/
 
 multer-tutorial/uploads/
 

@@ -1,6 +1,19 @@
 
+const { readFile, writeFile } = require('node:fs/promises')
+const { existsSync } = require('node:fs')
+const path = require('node:path')
+const loggers = require('../loggers.js')
+
+const DATA_STORE = process.env.DATA_STORE
+const FILE_NAME = 'events.json'
+const FILE_PATH = path.join(DATA_STORE, FILE_NAME)
+
+const logger = loggers.logger.child({ module: 'EventsDB' })
+
 const errorcodes = {
-    NOT_FOUND: 0,
+    READ_ERROR: 'READ ERROR',
+    WRITE_ERROR: 'WRITE ERROR',
+    NOT_FOUND: 'NOT FOUND',
 }
 
 class EventDBError extends Error {
@@ -17,7 +30,11 @@ class EventDB {
 
     static create() {
         if (EventDB.instance == null) {
-            EventDB.instance = new EventDB()
+            (async () => {
+                const db = new EventDB()
+                db.initialize()
+                EventDB.instance = db
+            })()
         }
         return EventDB.instance
     }
@@ -29,13 +46,88 @@ class EventDB {
         this.guestCounter = 0
     }
 
+    async initialize() {
+        logger.info('initializing events database')
+        try {
+
+            if (!existsSync(DATA_STORE)) {
+                logger.info('creating data store directory')
+                await mkdir(DATA_STORE, { recursive: true })
+            }
+
+            await this.__readFromFile()
+            logger.info('completed reading events database')
+        }
+        catch(err) {
+            logger.error(err)
+            process.exit()
+        }
+    }
+
+    async __writeToFile() { 
+        const events = this.events
+        const guests = this.guests
+        const eventCounter = this.eventCounter
+        const guestCounter = this.guestCounter
+        const data = {
+            eventCounter,
+            guestCounter,
+            events: [],
+            guests: []
+        }
+        for (const [ id, event ] of events) {
+            data.events.push(event)
+        }
+        for (const [ id, guest ] of guests) {
+            data.guests.push(guest)
+        }
+        const json = JSON.stringify(data)
+        
+        await writeFile(FILE_PATH, json)
+    }
+
+    async __readFromFile() {
+        if (!existsSync(FILE_PATH)) {
+            logger.info('events database file does not exists')
+            return
+        }
+        const data = await readFile(FILE_PATH)
+        if (!data || data.length === 0) {
+            logger.info('events database file is empty')
+            return
+        }
+        const json = JSON.parse(data)
+        const events = json.events
+        const guests = json.guests
+        for (const event of events) {
+            this.events.set(event.id, event)
+        }
+        for (const guest of guests) {
+            this.guests.set(guest.id, guest)
+        }
+        this.eventCounter = json.eventCounter
+        this.guestCounter = json.guestCounter
+     }
+
     // CRUD Methods For Event
 
-    createEvent(event) {
+    async createEvent(event) {
         const id = this.__generateEventId()
         const newEvent = { id, ...event}
-        this.events.set(id, newEvent)
-        return newEvent
+
+        try {
+            this.events.set(id, newEvent)
+
+            await this.__writeToFile()
+
+            logger.info('event saved successfully')
+
+            return newEvent
+        }
+        catch(err) {
+            this.events.delete(id)
+            throw new EventDBError('error creating event', errorcodes.WRITE_ERROR)
+        }
     }
 
     __generateEventId() { return ++this.eventCounter }
@@ -70,13 +162,13 @@ class EventDB {
         return null
     }
 
-    updateEvent(eventId, input) {
+    async updateEvent(eventId, input) {
         const events = this.events
         if (!this.__hasEvent(eventId)) {
             throw new EventDBError(`event with id ${eventId} does not exists`, errorcodes.NOT_FOUND)
         }
-        const event = events.get(eventId)
-
+        const oldEvent = events.get(eventId)
+        const event = { ...oldEvent }
         const { title, organizer, venu, description, start, end, status } = input
 
         if (title) {
@@ -101,14 +193,24 @@ class EventDB {
             event.end = end
         }
 
-        this.events.set(eventId, event)
-        
-        return event
+        try {
+            events.set(eventId, event)
+
+            await this.__writeToFile()
+
+            logger.info(`updated event with id ${eventId} saved successfully`)
+
+            return event
+        }
+        catch(err) {
+            events.set(eventId, oldEvent)
+            throw new EventDBError('error updating event', errorcodes.WRITE_ERROR)
+        }
     }
 
     // CRUD Methods For Guest
 
-    addGuestForEvent(eventId, input) {
+    async addGuestForEvent(eventId, input) {
         if (!this.__hasEvent(eventId)) {
             throw new EventDBError(`can not add guest to event ${eventId}; event does not exists`, errorcodes.NOT_FOUND)
         }
@@ -116,9 +218,19 @@ class EventDB {
         const id = this.__generateGuestId()
         const newGuest = { id, eventId, ...input }
 
-        this.guests.set(id, newGuest)
+        try {
+            this.guests.set(id, newGuest)
 
-        return newGuest
+            await this.__writeToFile()
+
+            logger.info(`add guest for event ${eventId} saved successfully`)
+
+            return newGuest
+        }
+        catch(err) { 
+            this.guests.delete(id)
+            throw new EventDBError('error adding guest', errorcodes.WRITE_ERROR)
+        }
     }
 
     __generateGuestId() { return ++this.guestCounter }
@@ -152,10 +264,10 @@ class EventDB {
         return filtered
     }
 
-    updateGuest(guestId, input) {
+    async updateGuest(guestId, input) {
         const guests = this.guests
         if (!this.__hasGuest(guestId)) {
-            throw new EventDBError(`guest with id ${guestId} not found`)
+            throw new EventDBError(`guest with id ${guestId} not found`, errorcodes.NOT_FOUND)
         }
         const oldguest = guests.get(guestId)
         const guest = { ...oldguest }
@@ -186,21 +298,38 @@ class EventDB {
             guest.guest_image_path = guest_image_path
         }
 
-        guests.set(guestId, guest)
-
-        return guest
+        try {
+            guests.set(guestId, guest)
+            await this.__writeToFile()
+            logger.info(`updated guest with id ${guestId} saved succeessfully`)
+            return guest
+        }
+        catch(err) {
+            guests.set(guestId, oldguest)
+            throw new EventDBError('error updating guest', errorcodes.WRITE_ERROR)
+        }
     }
 
-    removeGuest(guestId) {
-        const allguests = this.guests
+    async removeGuest(guestId) {
+        const allGuests = this.guests
         if (!this.__hasGuest(guestId)) {
             throw new EventDBError(`guest with id ${guestId} not found`, errorcodes.NOT_FOUND)
         }
 
-        const guest = allguests.get(guestId)
-        allguests.delete(guestId)
-        
-        return true
+        const guest = allGuests.get(guestId)
+
+        allGuests.delete(guestId)
+
+        try {
+            await this.__writeToFile()
+            logger.info(`remove guest with id ${guestId} saved successfully`)
+
+            return true
+        }
+        catch(err) {
+            allGuests.set(guestId, guest)
+            throw new EventDBError('error removing guest', errorcodes.WRITE_ERROR)
+        }
     }
 }
 

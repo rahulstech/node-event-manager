@@ -2,7 +2,6 @@ const { errorcodes, EventDB, EventDBError } = require('../database/eventsdb')
 const utils = require('../utils')
 const multer = require('multer')
 const loggers = require('../loggers.js')
-const { log } = require('winston')
 
 const logger = loggers.logger.child({ module: 'GuestsRoutes'})
 
@@ -16,7 +15,7 @@ const getAddGuestMiddleWares = () => {
     return multipart.single('guest_image')
 }
 
-const addGuestForEvent = (req, res) => {
+const addGuestForEvent = async (req, res) => {
 
     const { eventId } = req.params 
 
@@ -62,22 +61,18 @@ const addGuestForEvent = (req, res) => {
         const _eventId = Number(eventId)
         const guest = { firstname, lastname, age, sex, guest_image_path: guest_image.path,
             enter: enterDatetime, exit: exitDateTime, is_present: isPresent}
-        const newGuest = eventsdb.addGuestForEvent(_eventId, guest)
+
+        const newGuest = await eventsdb.addGuestForEvent(_eventId, guest)
 
         logger.info(`new guest for evnt ${eventId} saved successfully`)
         logger.debug(`new guest = `, { debugExtras: newGuest })
 
-        res.status(200).json({ code: 200, message: 'successful', data: newGuest })
+        res.status(200).json({ code: 200, message: 'guest added', data: newGuest })
     }
     catch(err) {
         logger.error(err)
-        if (err instanceof EventDBError) {
-            if (err.code === errorcodes.NOT_FOUND) {
-                return res.status(404).json({ code: 404, message: `no event found with id ${eventId}`})
-            }
-            else {
-                return res.status(500).json({ code: 500, message: `internal server error`})
-            }
+        if (err instanceof EventDBError && err.code === errorcodes.NOT_FOUND) {
+            return res.status(404).json({ code: 404, message: `no event found with id ${eventId}`})
         }
         else {
             return res.status(500).json({ code: 500, message: `internal server error`})
@@ -192,7 +187,7 @@ const updateGuest = (req, res) => {
         logger.info(`guest with id ${guestId} updated successfully`)
         logger.debug(`updated guest = `, { debugExtras: guest })
 
-        res.status(200).json({ code: 200, message: 'successful', data: guest })
+        res.status(200).json({ code: 200, message: 'guest updated', data: guest })
     }
     catch(err) {
         logger.error(err)
@@ -207,7 +202,7 @@ const updateGuest = (req, res) => {
 
 // Delete Guest
 
-const removeGuest = (req, res) => {
+const removeGuest = async (req, res) => {
     const { guestId } = req.params
 
     logger.info(`called removeGuest() with id ${guestId}`)
@@ -215,11 +210,11 @@ const removeGuest = (req, res) => {
     const _id = Number(guestId)
 
     try {
-        eventsdb.removeGuest(_id)
+        await eventsdb.removeGuest(_id)
 
         logger.info(`guest with id ${guestId} removed successfully`)
 
-        res.status(200).json({ code: 200, message: 'successful' })
+        res.status(200).json({ code: 200, message: 'guest removed' })
     }
     catch(err) {
         logger.error(err)
