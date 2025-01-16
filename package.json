@@ -6,7 +6,7 @@
   "type": "commonjs",
   "scripts": {
     "eventmanager": "node --watch-path=eventmanager/src --env-file-if-exists=eventmanager/.env eventmanager/src/app.js",
-    "test-eventmanaaager": "npx jest eventmanager/test",
+    "test-eventmanager": "npx jest eventmanager/test",
     "winston-tutorial": "node winston-tutorial/app.js"
   },
   "repository": {

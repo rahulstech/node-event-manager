@@ -4,9 +4,9 @@ const { existsSync } = require('node:fs')
 const path = require('node:path')
 const loggers = require('../loggers.js')
 
-const DATA_STORE = process.env.DATA_STORE
 const FILE_NAME = 'events.json'
-const FILE_PATH = path.join(DATA_STORE, FILE_NAME)
+
+const IN_MEMORY = ':memory:' // for testing
 
 const logger = loggers.logger.child({ module: 'EventsDB' })
 
@@ -31,7 +31,8 @@ class EventDB {
     static create() {
         if (EventDB.instance == null) {
             (async () => {
-                const db = new EventDB()
+                const filepath = path.resolve(process.env.DATA_STORE, FILE_NAME)
+                const db = new EventDB(filepath)
                 db.initialize()
                 EventDB.instance = db
             })()
@@ -39,7 +40,22 @@ class EventDB {
         return EventDB.instance
     }
 
-    constructor() {
+    static createTest({ events, eventCounter, guests, guestCounter }) {
+        if (EventDB.instance == null) {
+            const db = new EventDB(IN_MEMORY)
+                
+            db.events = events ? new Map(events.map( e => [e.id, e])) : new Map()
+            db.eventCounter = eventCounter
+            db.guests = guests ? new Map(guests.map( g => [g.id, g])) : new Map()
+            db.guestCounter = guestCounter
+
+            EventDB.instance = db
+        }
+        return EventDB.instance
+    }
+
+    constructor(filepath) {
+        this.filepath = filepath
         this.events = new Map()
         this.eventCounter = 0
         this.guests = new Map()
@@ -47,15 +63,18 @@ class EventDB {
     }
 
     async initialize() {
-        logger.info('initializing events database')
-        try {
+        if (this.__isInMemory()) {
+            logger.info('initializing in-memory events database')
+            return
+        }
 
-            if (!existsSync(DATA_STORE)) {
-                logger.info('creating data store directory')
-                await mkdir(DATA_STORE, { recursive: true })
-            }
+        logger.info('initializing events database')
+
+        try {
+            await this.__createDiretory()
 
             await this.__readFromFile()
+
             logger.info('completed reading events database')
         }
         catch(err) {
@@ -64,7 +83,23 @@ class EventDB {
         }
     }
 
+    __isInMemory() { return this.filepath === IN_MEMORY }
+
+    async __createDiretory() {
+        const dirname = path.dirname(this.filepath)
+
+        if (!existsSync(dirname)) {
+            logger.info(`creating data store directory ${dirname}`)
+
+            await mkdir(DATA_STORE, { recursive: true })
+        }
+    }
+
     async __writeToFile() { 
+        if (this.__isInMemory()) {
+            return
+        }
+
         const events = this.events
         const guests = this.guests
         const eventCounter = this.eventCounter
@@ -87,12 +122,8 @@ class EventDB {
     }
 
     async __readFromFile() {
-        if (!existsSync(FILE_PATH)) {
-            logger.info('events database file does not exists')
-            return
-        }
-        const data = await readFile(FILE_PATH)
-        if (!data || data.length === 0) {
+        const data = await readFile(this.filepath, 'utf-8')
+        if (!data) {
             logger.info('events database file is empty')
             return
         }
@@ -155,11 +186,11 @@ class EventDB {
 
     getEventById(eventId) {
         const events = this.events
-        if (this.__hasEvent(eventId)) {
-            const event = events.get(eventId)
-            return event
+        if (!this.__hasEvent(eventId)) {
+            throw new EventDBError(`event with id ${eventId} does not exists`, errorcodes.NOT_FOUND)
         }
-        return null
+        const event = events.get(eventId)
+        return event
     }
 
     async updateEvent(eventId, input) {
@@ -253,7 +284,7 @@ class EventDB {
 
     getGuestById(guestId) {
         if (!this.__hasGuest(guestId)) {
-            return null
+            throw new EventDBError(`guest with id ${guestId} not found`, errorcodes.NOT_FOUND)
         }
         return this.guests.get(guestId)
     }

@@ -1,14 +1,7 @@
-
 const express = require('express')
-
 const events_routes = require('./routes/events')
-
 const guests_routes = require('./routes/guests')
-
-const utils = require('./utils.js')
-
 const loggers = require('./loggers.js') 
-
 
 const logger = loggers.logger.child({ 
     module: 'EventManager',
@@ -47,7 +40,23 @@ server.put('/api/v1/guests/:guestId', guests_routes.getUpdateGuestMiddleWares(),
 
 server.delete('/api/v1/guests/:guestId', guests_routes.removeGuest)
 
-// TODO: implement 404 not found
+// Error handling middleware
+
+server.all('*', (req, res) => {
+    logger.info(`${req.method} ${req.url} Not Found`)
+    res.status(404).json({
+        code: 404,
+        message: 'Not Found'
+    })
+})
+
+server.use((err, req, res, next) => {
+    logger.error(err)
+    res.status(500).json({
+        code: 500,
+        message: 'Internal Server Error'
+    })
+})
 
 
 server.listen(process.env.SERVER_PORT, () => logger.info(`server is listening on port ${process.env.SERVER_PORT}`))

@@ -39,7 +39,7 @@ For data storage json files are used. Each event data with guest list is stoted 
     ```json
     {
         "code": 200,
-        "message": "successful",
+        "message": "event created",
         "data": [
             {
                 "id": 1,
@@ -152,7 +152,7 @@ For data storage json files are used. Each event data with guest list is stoted 
     ```json
     {
         "code": 200,
-        "message": "successful",
+        "message": "event updated",
         "data": {
             "id": 1,
             "title": "event1",
@@ -191,7 +191,8 @@ For data storage json files are used. Each event data with guest list is stoted 
                     "firstname": "person1 fn",
                     "lastname": "person1 ln",
                     "age": 34,
-                    "sex": "M",
+                    "sex": "MALE",
+                    "guest_image_path": "/path/to/guest/image/image.ext",
                     "is_present": "NOTSET",
                     "enter": "2023-05-15 14:46",
                     "exit": "2023-05-15 15:55"
@@ -202,7 +203,8 @@ For data storage json files are used. Each event data with guest list is stoted 
                     "firstname": "person2 fn",
                     "lastname": "person2 ln",
                     "age": 28,
-                    "sex": "F",
+                    "sex": "FEMALE",
+                    "guest_image_path": "/path/to/guest/image/image.ext",
                     "is_present": "NOTSET",
                     "enter": "2023-05-15 14:15",
                     "exit": "2023-05-15 16:15"
@@ -226,14 +228,15 @@ For data storage json files are used. Each event data with guest list is stoted 
     ```json
     {
         "code": 200,
-        "message": "successful",
+        "message": "guest added",
         "data": {
             "id": 1,
             "eventId": 1,
             "firstname": "person1 fn",
             "lastname": "person1 ln",
             "age": 34,
-            "sex": "M",
+            "sex": "MALE",
+            "guest_image_path": "/path/to/guest/image/image.ext",
             "is_present": "NOTSET",
             "enter": "2023-05-15 14:46",
             "exit": "2023-05-15 15:55"
@@ -257,14 +260,15 @@ For data storage json files are used. Each event data with guest list is stoted 
      ```json
     {
         "code": 200,
-        "message": "successful",
+        "message": "guest updated",
         "data": {
             "id": 1,
             "eventId": 1,
             "firstname": "person1 fn",
             "lastname": "person1 ln",
             "age": 34,
-            "sex": "M",
+            "sex": "MALE",
+            "guest_image_path": "/path/to/guest/image/image.ext",
             "is_present": "NOTSET",
             "enter": "2023-05-15 14:46",
             "exit": "2023-05-15 15:55"
@@ -287,7 +291,7 @@ For data storage json files are used. Each event data with guest list is stoted 
     ```json
     {
         "code": 200,
-        "message": "successful"
+        "message": "guest removed"
     }
     ```
 
@@ -324,7 +328,8 @@ For data storage json files are used. Each event data with guest list is stoted 
                     "firstname": "person1 fn",
                     "lastname": "person1 ln",
                     "age": 34,
-                    "sex": "M",
+                    "sex": "MALE",
+                    "guest_image_path": "/path/to/guest/image/image.ext",
                     "is_present": "NOTSET",
                     "enter": "2023-05-15 14:46",
                     "exit": "2023-05-15 15:55"
@@ -335,7 +340,8 @@ For data storage json files are used. Each event data with guest list is stoted 
                     "firstname": "person2 fn",
                     "lastname": "person2 ln",
                     "age": 28,
-                    "sex": "F",
+                    "sex": "FEMALE",
+                    "guest_image_path": "/path/to/guest/image/image.ext",
                     "is_present": "NOTSET",
                     "enter": "2023-05-15 14:15",
                     "exit": "2023-05-15 16:15"

@@ -54,8 +54,12 @@ const getEventById = (req, res) => {
     }
     catch(err) {
         logger.error(err)
-        
-        return res.status(500).json({ code: 500, message: 'internal server error'})
+        if (err instanceof EventDBError && err.code == errorcodes.NOT_FOUND) {
+            return res.status(404).json({ code: 404, message: `no event found with id ${eventId}`})
+        }
+        else {
+            return res.status(500).json({ code: 500, message: 'internal server error'})
+        }
     }
 }
 
@@ -185,7 +189,7 @@ const updateEvent = async (req, res) => {
         logger.info(`event with id ${eventId} updated successfully`)
         logger.debug(`updated event = `, { debugExtras: event })
             
-        res.status(200).json({ code: 200, message: 'successful', data: event })
+        res.status(200).json({ code: 200, message: 'event updated', data: event })
     }
     catch(err) {
         logger.error(err)
