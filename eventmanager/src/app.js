@@ -5,8 +5,23 @@ const events_routes = require('./routes/events')
 
 const guests_routes = require('./routes/guests')
 
+const utils = require('./utils.js')
+
+const loggers = require('./loggers.js') 
+
+
+const logger = loggers.logger.child({ 
+    module: 'EventManager',
+})
 
 const server = express()
+
+// global middlewares
+
+server.use((req, res, next) => {
+    logger.info(`${req.method} ${req.url}`)
+    next()
+})
 
 // Events related routers
 
@@ -35,5 +50,5 @@ server.delete('/api/v1/guests/:guestId', guests_routes.removeGuest)
 // TODO: implement 404 not found
 
 
-server.listen(process.env.SERVER_PORT, () => console.log(`server is listening on port ${process.env.SERVER_PORT}`))
+server.listen(process.env.SERVER_PORT, () => logger.info(`server is listening on port ${process.env.SERVER_PORT}`))
 

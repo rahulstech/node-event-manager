@@ -1,9 +1,12 @@
 node_modules/
 .git/
 
+eventmanager/.env
 eventmanager/uploads/
+eventmanager/logs/
+
 multer-tutorial/uploads/
+
 winston-tutorial/logs/
 
 package-lock.json
-

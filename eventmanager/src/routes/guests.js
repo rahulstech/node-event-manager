@@ -1,7 +1,10 @@
 const { errorcodes, EventDB, EventDBError } = require('../database/eventsdb')
 const utils = require('../utils')
 const multer = require('multer')
-const path = require('node:path')
+const loggers = require('../loggers.js')
+const { log } = require('winston')
+
+const logger = loggers.logger.child({ module: 'GuestsRoutes'})
 
 const eventsdb = EventDB.create()
 
@@ -14,14 +17,17 @@ const getAddGuestMiddleWares = () => {
 }
 
 const addGuestForEvent = (req, res) => {
+
     const { eventId } = req.params 
+
+    logger.info(`called addGuestForEvent() with id ${eventId}`)
+    logger.debug('addGuestForEvent() body = ', { debugExtras: { body: req.body, file: req.file }})
+
     const { firstname, lastname, age, sex, enter, exit, is_present } = req.body
     const guest_image = req.file
 
-    console.log(`adding new guest for event ${eventId}; guest info `, req.body, ', guest_image = ', guest_image)
-
     if (!firstname || !lastname || !age || !sex ) {
-        console.log('some of the inputs in addGuest are invaid')
+        logger.debug('some of the inputs in addGuestForEvent() are invalid')
         return res.status(400).json({ code: 400, message: 'invalid input(s)' })
     }
 
@@ -32,7 +38,7 @@ const addGuestForEvent = (req, res) => {
             enterDatetime = utils.parseDateTime(enter)
         }
         catch(err) {
-            console.log(`parse enter datetime '${enter}' failed with error `, err)
+            logger.error(err)
             return res.status(400).json({ code: 400, message: `invalid enter date time '${enter}'; must be in format 'YYYY-MM-DD HH:MM'`})
         }
     }
@@ -42,7 +48,7 @@ const addGuestForEvent = (req, res) => {
             enterDatetime = utils.parseDateTime(exit)
         }
         catch(err) {
-            console.log(`parse exit datetime '${exit}' failed with error `, err)
+            logger.error(err)
             return res.status(400).json({ code: 400, message: `invalid exit date time '${exit}'; must be in format 'YYYY-MM-DD HH:MM'`})
         }
     }
@@ -58,12 +64,13 @@ const addGuestForEvent = (req, res) => {
             enter: enterDatetime, exit: exitDateTime, is_present: isPresent}
         const newGuest = eventsdb.addGuestForEvent(_eventId, guest)
 
-        console.log(`new guest `, guest , ` for event ${eventId} saved successfully`)
+        logger.info(`new guest for evnt ${eventId} saved successfully`)
+        logger.debug(`new guest = `, { debugExtras: newGuest })
 
         res.status(200).json({ code: 200, message: 'successful', data: newGuest })
     }
     catch(err) {
-        console.log(`add guest failed with an error `, err)
+        logger.error(err)
         if (err instanceof EventDBError) {
             if (err.code === errorcodes.NOT_FOUND) {
                 return res.status(404).json({ code: 404, message: `no event found with id ${eventId}`})
@@ -83,16 +90,20 @@ const addGuestForEvent = (req, res) => {
 const getAllGuestsForEvent = (req, res) => {
     const { eventId } = req.params
 
-    console.log(`get all guests for event with id ${eventId}`)
+    logger.info(`called getAllGuestsForEvent() with event id ${eventId}`)
 
     try {
         const _eventId = Number(eventId)
         const event = eventsdb.getEventById(_eventId)
         const guests = eventsdb.getAllGuestsForEvent(_eventId)
+
+        logger.info(`got all guests for event '${eventId}'`)
+        logger.debug(`event and guests for eventId ${eventId} = `, { debugExtras: { event, guests }})
+
         res.status(200).json({ code: 200, message: 'successful', data: { event, guests } })
     }
     catch (err) {
-        console.log(`get all guests for event with id ${eventId} failed with error `, err)
+        logger.error(err)
         if (err instanceof EventDBError && err.code === errorcodes.NOT_FOUND) {
             return res.status(404).json({ code: 404, message: `no event found with id ${eventId}`})
         }
@@ -106,15 +117,20 @@ const searchEventGuests = (req, res) => {
     const { eventId } = req.params
     const { k } = req.query
 
-    console.log(`search event guests for each with id ${eventId} and query `, req.query)
+    logger.info(`called searchEventGuests() with event id ${eventId}`)
+    logger.debug(`search event '${eventId}' guests with query = `, { debugExtras: req.query })
 
     try {
         const _eventId = Number(eventId)
         const guests = eventsdb.filterGuestsForEvent(_eventId, k)
+
+        logger.info(`search guests for event with id ${eventId} successful`)
+        logger.debug(`guests = `, { debugExtras: guests })
+
         res.status(200).json({ code: 200, message: 'successful', data: guests })
     }
     catch (err) {
-        console.log(`search guests for event with id ${eventId} failed with error `, err)
+        logger.error(err)
         if (err instanceof EventDBError && err.code === errorcodes.NOT_FOUND) {
             return res.status(404).json({ code: 404, message: `no event found with id ${eventId}`})
         }
@@ -132,8 +148,9 @@ const getUpdateGuestMiddleWares = () => {
 
 const updateGuest = (req, res) => {
     const { guestId } = req.params
-    
-    console.log(`update guest with id ${guestId} and values `, req.body)
+
+    logger.info(`called updateGuest() with id ${guestId}`)
+    logger.debug(`updateGuest() body = `, { debugExtras: { body: req.body, file: req.file }})
 
     const { firstname, lastname, age, sex, enter, exit, is_present } = req.body
     const guest_image = req.file
@@ -146,7 +163,7 @@ const updateGuest = (req, res) => {
             enterDatetime = utils.parseDateTime(enter)
         }
         catch(err) {
-            console.log(`parse enter date time '${enter}' failed with error `, err)
+            logger.error(err)
             return res.status(400).json({ code: 400, message: `invalid enter date time  '${enter}'; valid format 'YYYY-MM-DD HH:MM'`})
         }
     }
@@ -156,7 +173,7 @@ const updateGuest = (req, res) => {
             exitDateTime = utils.parseDateTime(exit)
         }
         catch(err) {
-            console.log(`parse enter date time '${exit}' failed with error `, err)
+            logger.error(err)
             return res.status(400).json({ code: 400, message: `invalid enter date time  '${exit}'; valid format 'YYYY-MM-DD HH:MM'`})
         }
     }
@@ -171,12 +188,14 @@ const updateGuest = (req, res) => {
             enter: enterDatetime, exit: exitDateTime, is_present: isPresent }
         const _guestId = Number(guestId)
         const guest = eventsdb.updateGuest(_guestId, input)
-        console.log('updated guest ', guest)
+
+        logger.info(`guest with id ${guestId} updated successfully`)
+        logger.debug(`updated guest = `, { debugExtras: guest })
 
         res.status(200).json({ code: 200, message: 'successful', data: guest })
     }
     catch(err) {
-        console.log(`update guest with id ${guestId} failed with error `, err)
+        logger.error(err)
         if (err instanceof EventDBError && err.code == errorcodes.NOT_FOUND) {
             return res.status(404).json({ code: 404, message: `no guest found with id ${guestId}`})
         }
@@ -191,15 +210,19 @@ const updateGuest = (req, res) => {
 const removeGuest = (req, res) => {
     const { guestId } = req.params
 
+    logger.info(`called removeGuest() with id ${guestId}`)
+
     const _id = Number(guestId)
-    console.log(`remove guest with id ${guestId}`)
 
     try {
         eventsdb.removeGuest(_id)
+
+        logger.info(`guest with id ${guestId} removed successfully`)
+
         res.status(200).json({ code: 200, message: 'successful' })
     }
     catch(err) {
-        console.log(`remove guest with id ${guestId} failed with error `, err)
+        logger.error(err)
         if (err instanceof EventDBError && err.code === errorcodes.NOT_FOUND) {
             return res.status(404).json({ code: 404, message: `no guest found with id ${guestId}`})
         }
