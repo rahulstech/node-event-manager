@@ -54,8 +54,23 @@ async function exampleNoUsernameNoFirstname() {
     }
 }
 
-const examples = [ exampleValid, exampleOnlyUsername, exampleOnlyFirstname, exampleNoUsernameNoFirstname ]
+// NOTE: if undefined is passed to validate or validateAsync in joi then it does not starts validating
+// and the returned value is undefined too
 
-examples.forEach( fn => {
-    fn()
-})
+async function exampleValidateUndefined() {
+    try {
+        const value = await schema.validateAsync(undefined, { abortEarly: false })
+        console.log('value: ', value)
+    }
+    catch(err) {
+        console.log('error', JSON.stringify(err, null, 3))
+    }
+}
+
+// const examples = [ exampleValid, exampleOnlyUsername, exampleOnlyFirstname, exampleNoUsernameNoFirstname ]
+
+// examples.forEach( (fn) => {
+//     fn()
+// })
+
+exampleValidateUndefined()
