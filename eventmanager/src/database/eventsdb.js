@@ -2,13 +2,18 @@
 const { readFile, writeFile } = require('node:fs/promises')
 const { existsSync } = require('node:fs')
 const path = require('node:path')
-const loggers = require('../loggers.js')
+const loggers = require('../utils/loggers')
 
 const FILE_NAME = 'events.json'
 
 const IN_MEMORY = ':memory:' // for testing
 
 const logger = loggers.logger.child({ module: 'EventsDB' })
+
+const enumValues = ( enumClass ) => {
+    return Object.values(enumClass)
+            .filter( value => typeof value === 'string' )
+}
 
 const errorcodes = {
     READ_ERROR: 'READ ERROR',
@@ -22,6 +27,27 @@ class EventDBError extends Error {
         super(message)
         this.code = code
     }
+}
+
+const EventStatus = {
+
+    PENDING: 'PENDING', RUNNING: 'RUNNING', CANCELED: 'CANCELED', FINISHED: 'FINISHED',
+
+    values: () => enumValues(EventStatus)
+}
+
+const Sex = {
+
+    MALE: 'MALE', FEMALE: 'FEMALE', OTHER: 'OTHER',
+
+    values: () => enumValues(Sex)
+}
+
+const GuestStatus = {
+
+    NOTSET: 'NOTST', PRESENT: 'PRESENT', ABSENT: 'ABSENT',
+
+    values: () => enumValues(GuestStatus)
 }
 
 class EventDB {
@@ -118,10 +144,11 @@ class EventDB {
         }
         const json = JSON.stringify(data)
         
-        await writeFile(FILE_PATH, json)
+        await writeFile(this.filepath, json) // error for this not so clearly logged
     }
 
     async __readFromFile() {
+
         const data = await readFile(this.filepath, 'utf-8')
         if (!data) {
             logger.info('events database file is empty')
@@ -364,4 +391,4 @@ class EventDB {
     }
 }
 
-module.exports = { errorcodes, EventDB, EventDBError }
+module.exports = { errorcodes, EventDB, EventDBError, EventStatus, Sex, GuestStatus }

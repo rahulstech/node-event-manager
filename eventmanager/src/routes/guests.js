@@ -1,8 +1,9 @@
 const { errorcodes, EventDB, EventDBError } = require('../database/eventsdb')
-const utils = require('../utils')
+const utils = require('../utils/helpers.js')
 const multer = require('multer')
-const loggers = require('../loggers.js')
-
+const loggers = require('../utils/loggers.js')
+const { mwAddGuestForEventValidateBody, mwUpdateGuestValidateBody } = require('../services/input_validation/GuestInputValidationService.js')
+8
 const logger = loggers.logger.child({ module: 'GuestsRoutes'})
 
 const eventsdb = EventDB.create()
@@ -12,7 +13,11 @@ const multipart = multer({ dest: process.env.GUESTS_IMAGE_STORE })
 // Create Guest 
 
 const getAddGuestMiddleWares = () => {
-    return multipart.single('guest_image')
+    return [
+        multipart.single('guest_image'), // extract body
+
+        mwAddGuestForEventValidateBody, // validate body
+    ]
 }
 
 const addGuestForEvent = async (req, res) => {
@@ -22,50 +27,19 @@ const addGuestForEvent = async (req, res) => {
     logger.info(`called addGuestForEvent() with id ${eventId}`)
     logger.debug('addGuestForEvent() body = ', { debugExtras: { body: req.body, file: req.file }})
 
-    const { firstname, lastname, age, sex, enter, exit, is_present } = req.body
-    const guest_image = req.file
-
-    if (!firstname || !lastname || !age || !sex ) {
-        logger.debug('some of the inputs in addGuestForEvent() are invalid')
-        return res.status(400).json({ code: 400, message: 'invalid input(s)' })
-    }
-
-    let enterDatetime = null
-    let exitDateTime = null
-    if (enter) {
-        try {
-            enterDatetime = utils.parseDateTime(enter)
-        }
-        catch(err) {
-            logger.error(err)
-            return res.status(400).json({ code: 400, message: `invalid enter date time '${enter}'; must be in format 'YYYY-MM-DD HH:MM'`})
-        }
-    }
-
-    if (exit) {
-        try {
-            enterDatetime = utils.parseDateTime(exit)
-        }
-        catch(err) {
-            logger.error(err)
-            return res.status(400).json({ code: 400, message: `invalid exit date time '${exit}'; must be in format 'YYYY-MM-DD HH:MM'`})
-        }
-    }
-
-    let isPresent = 'NOTSET'
-    if (is_present && !['ABSENT', 'PRESENT','NOTSET'].includes(is_present)) {
-        isPresent = 'NOTSET'
-    }
+    const guest_image = req.file 
 
     try {
         const _eventId = Number(eventId)
-        const guest = { firstname, lastname, age, sex, guest_image_path: guest_image.path,
-            enter: enterDatetime, exit: exitDateTime, is_present: isPresent}
+
+        const validBody = req.validBody
+
+        const guest = { ...validBody, guest_image_path: guest_image.path }
 
         const newGuest = await eventsdb.addGuestForEvent(_eventId, guest)
 
-        logger.info(`new guest for evnt ${eventId} saved successfully`)
-        logger.debug(`new guest = `, { debugExtras: newGuest })
+        logger.info(`new guest for event ${eventId} added successfully`)
+        logger.debug(`new guest`, { debugExtras: newGuest })
 
         res.status(200).json({ code: 200, message: 'guest added', data: newGuest })
     }
@@ -138,7 +112,11 @@ const searchEventGuests = (req, res) => {
 // Update Guest
 
 const getUpdateGuestMiddleWares = () => {
-    return multipart.single('guest_image')
+    return [
+        multipart.single('guest_image'), // extract body
+
+        mwUpdateGuestValidateBody  // validate body
+    ]
 }
 
 const updateGuest = (req, res) => {

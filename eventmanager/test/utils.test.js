@@ -1,4 +1,4 @@
-const utils = require('../src/utils')
+const utils = require('../src/utils/helpers')
 
 function test_formatDateTime() {
     const validInput = new Date(2023,4,16,14,5)

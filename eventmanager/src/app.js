@@ -1,7 +1,7 @@
 const express = require('express')
 const events_routes = require('./routes/events')
 const guests_routes = require('./routes/guests')
-const loggers = require('./loggers.js') 
+const loggers = require('./utils/loggers.js') 
 
 const logger = loggers.logger.child({ 
     module: 'EventManager',

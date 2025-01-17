@@ -1,7 +1,8 @@
 const { errorcodes, EventDB, EventDBError } = require('../database/eventsdb')
 const multer = require('multer')
-const utils = require('../utils')
-const loggers = require('../loggers')
+const utils = require('../utils/helpers')
+const loggers = require('../utils/loggers')
+const { mwCreateEventBodyValidator, mwUpdateEventBodyValidator } = require('../services/input_validation/EventInputValidationService')
 
 const logger = loggers.logger.child({ module: 'EventRoutes' })
 
@@ -86,7 +87,10 @@ const filterEvents = (req, res) => {
 // create
 
 const getCreateEventMiddleWares = () => {
-    return multer().none()
+    return [
+        multer().none(), // extract body
+        mwCreateEventBodyValidator, // validate body
+    ]
 }
 
 const createEvent = async (req, res) => {
@@ -97,48 +101,21 @@ const createEvent = async (req, res) => {
 
     logger.info('called createEvent()')
 
-    logger.debug('createEvent() body = ', { debugExtras: req.body })
-
-    const { title, organizer, venu, description, start, end, status } = req.body
-
-    if (!title || !organizer || !venu || !description || !start || !end) {
-        logger.info('some createEvent() inputes are missing or invalid')
-
-        return res.status(400).json({ code: 400, message: 'invalid input'})
-    }
-
-    let startDateTime, endDateTime
-
-    try {
-        startDateTime = utils.parseDateTime(start)
-    }
-    catch(err) {
-        logger.error(err)
-        return res.status(400).json({ code: 400, message: `invalid start datetime '${start}''`})
-    }
-
-    try {
-        endDateTime = utils.parseDateTime(end)
-    }
-    catch(err) {
-        logger.error(err)
-        return res.status(400).json({ code: 400, message: `invalid end datetime '${end}'`})
-    }
-
-    const eventCurrentStatus = !status ? "PENDING" : status
-
     // step2: add the event to database
     try {
-        const newEvent = await eventdb.createEvent({ title, organizer, venu, description, start: startDateTime, end: endDateTime, status: eventCurrentStatus })
+        
+        const event = req.validBody
+
+        const newEvent = await eventdb.createEvent(event)
 
         logger.info('new event saved successfully')
-        logger.debug('new event = ', { debugExtras: newEvent })
+        logger.debug('new event ', { debugExtras: newEvent })
 
         // step3: send the response
         return res.status(200).json({ code: 200, message: "event saved", data: newEvent })
     }
     catch(err) {
-        logger.error(err)
+        logger.error('createEvent() encountered an error; ',err)
         return res.status(500).json({ code: 500, message: "not saved"})
     }
 }
@@ -146,7 +123,11 @@ const createEvent = async (req, res) => {
 // update
 
 const getUpdateEventMiddleWares = () => {
-    return multer().none()
+    return [
+        multer().none(), // extract body
+
+        mwUpdateEventBodyValidator // validate body
+    ]
 }
 
 const updateEvent = async (req, res) => {
