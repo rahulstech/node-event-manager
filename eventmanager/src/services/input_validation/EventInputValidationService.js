@@ -1,5 +1,5 @@
 const joi = require('joi')
-const utils = require('../../utils/helpers')
+const { pushValidBody, isDateTimeAfter } = require('../../utils/helpers')
 const loggers = require('../../utils/loggers')
 const { EventStatus } = require('../../database/eventsdb')
 const { InputValidationError, getJoiCustomDateTimeRule } = require('./inputvalidator')
@@ -19,6 +19,12 @@ const field_start = joi.string().custom(getJoiCustomDateTimeRule())
 const field_end = joi.string().custom(getJoiCustomDateTimeRule())
 
 const field_status = joi.string().valid(...EventStatus.values())
+
+function checkEndIsAfterStartExclusive(start, end) {
+    if (!isDateTimeAfter(end, start)) {
+        throw new InputValidationError('end must be after start')
+    }
+}
 
 ////////////////////////////////////////
 ///      Validate Update Event      ///
@@ -43,11 +49,11 @@ const schemaCreateEvent = joi.object({
 
 const validateCreateEventBody = async ( body ) => {
 
-    logger.info('will validate create event body')
-    logger.debug('body received for create event', { debugExtras: body })
-
     try {
-        const value = await schemaCreateEvent.validateAsync( body, { abortEarly: false })
+        const value = await schemaCreateEvent.validateAsync( body, { abortEarly: false, allowUnknown: false })
+        const { start, end } = value
+
+        checkEndIsAfterStartExclusive(start, end)
 
         logger.info('create event body validated successfully')
         logger.debug('valid value for create event ', { debugExtras: value })
@@ -55,6 +61,10 @@ const validateCreateEventBody = async ( body ) => {
         return value
     }
     catch (err) {
+        if (err instanceof InputValidationError) {
+            throw err
+        }
+
         throw new InputValidationError(err)
     }
 }
@@ -62,18 +72,17 @@ const validateCreateEventBody = async ( body ) => {
 const mwCreateEventBodyValidator = async (req, res, next) => {
     const body = req.body
 
-    if (body === null || body === undefined) {
-        return res.status(400).json({ code: 400, message: 'empty body' })
-    }
+    logger.info('will validate create event body')
+    logger.debug('body received for create event', { debugExtras: body })
 
-    if (Object.keys(body).length === 0) {
+    if (body === null || body === undefined) {
         return res.status(400).json({ code: 400, message: 'empty body' })
     }
 
     try {
         const value = await validateCreateEventBody(req.body)
 
-        req.validBody = value
+        pushValidBody(req, { eventData: value })
 
         next()
     }
@@ -110,12 +119,21 @@ const schemaUpdateEvent = joi.object({
     status: field_status
 })
 
-const validateUpdateEventBody = async ( body ) => {
-    logger.info('will validate update event body')
-    logger.debug('body received for update event ', { debugExtras: body })
+const validateUpdateEventBody = async ( event, body ) => {
 
     try {
         const value = await schemaUpdateEvent.validateAsync(body)
+        const { start, end } = value
+
+        if (start && end) {
+            checkEndIsAfterStartExclusive(start, end)
+        }
+        else if (!start && end) {
+            checkEndIsAfterStartExclusive(event.start, end)
+        }
+        else if (start && !end) {
+            checkEndIsAfterStartExclusive(start, event.end)
+        }
 
         logger.info('update event body validated succesdfully')
         logger.debug('valid valid for update event ', { debugExtras: value })
@@ -123,12 +141,21 @@ const validateUpdateEventBody = async ( body ) => {
         return value
     }
     catch(err) {
+        if (err instanceof InputValidationError) {
+            throw err
+        }
+
         throw new InputValidationError(err)
     }
 }
 
 const mwUpdateEventBodyValidator = async (req, res, next) => {
+    const { event } = req.validBody
+
     const body = req.body
+
+    logger.info('will validate update event body')
+    logger.debug('body received for update event ', { debugExtras: body })
 
     if (body === null || body === undefined) {
         return res.status(400).json({ code: 400, message: 'empty body' })
@@ -139,7 +166,7 @@ const mwUpdateEventBodyValidator = async (req, res, next) => {
     }
 
     try {
-        const value = await validateUpdateEventBody(req.body)
+        const value = await validateUpdateEventBody(event, body)
 
         req.validBody = value
 

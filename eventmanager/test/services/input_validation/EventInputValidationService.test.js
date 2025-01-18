@@ -29,7 +29,7 @@ describe('validateCreateEvent(body)', () => {
         return expect(validateCreateEventBody(body)).resolves.toEqual(expected)
     })
 
-    test('validateCreateEvent: missing start and missing end date', () => {
+    test('missing start and missing end date', () => {
         const body = { 
             title: 'Annual Meeting',
             organizer: 'Microsoft',
@@ -43,7 +43,24 @@ describe('validateCreateEvent(body)', () => {
         return expect(validateCreateEventBody(body)).rejects.toThrow(InputValidationError)
     })
 
-    test('validateCreateEvent: invalid status', () => {
+    test('end is before start', () => {
+        const body = { 
+            title: 'Annual Meeting',
+            organizer: 'Microsoft',
+            venu: 'London',
+            description: 'This is annual general meeting of Microsoft.',
+            start: '2024-03-21 16:00',
+            end: '2024-03-21 14:00',
+            status: 'PENDING'
+        }
+    
+        return expect(validateCreateEventBody(body)).rejects.toThrow(expect.objectContaining({
+            name: 'InputValidationError',
+            message: 'end must be after start'
+        }))
+    })
+
+    test('invalid status', () => {
         const body = { 
             title: 'Annual Meeting',
             organizer: 'Microsoft',
@@ -54,7 +71,30 @@ describe('validateCreateEvent(body)', () => {
             status: 'UNKNOWN'
         }
     
-        return expect(validateCreateEventBody(body)).rejects.toThrow(InputValidationError)
+        return expect(validateCreateEventBody(body)).rejects.toThrow(expect.objectContaining({
+            name: 'InputValidationError',
+            message: '["\\\"status\\\" must be one of [PENDING, RUNNING, CANCELED, FINISHED]"]'
+        }))
+    })
+
+    test('new start after new end', () => {
+    
+        const body = { 
+            title: 'Annual Meeting',
+            organizer: 'Microsoft',
+            venu: 'London',
+            description: 'This is annual general meeting of Microsoft.',
+            start: '2024-03-21 11:00',
+            end: '2024-03-21 15:00',
+            status: 'PENDING',
+            unknown: 'unknown value'
+        }
+    
+        return expect(validateCreateEventBody(body))
+                    .rejects.toThrow(expect.objectContaining({
+                        name: 'InputValidationError',
+                        message: '["\\\"unknown\\\" is not allowed"]'
+                    }))
     })
 })
 
@@ -62,7 +102,18 @@ describe('validateCreateEvent(body)', () => {
 
 describe('validateUpdateEvent(body)', () => {
 
-    test('validateUpdateEvent: all fields valid body', () => {
+    const event = { 
+        id: 1,
+        title: 'Annual Meeting',
+        organizer: 'Microsoft',
+        venu: 'London',
+        description: 'This is annual general meeting of Microsoft.',
+        start: '2024-03-21 11:00',
+        end: '2024-03-21 15:00',
+        status: 'FINISHED'
+    }
+
+    test('all fields valid body', () => {
         const body = { 
             title: 'Annual Meeting',
             organizer: 'Microsoft',
@@ -83,10 +134,10 @@ describe('validateUpdateEvent(body)', () => {
             status: 'FINISHED'
         }
     
-        return expect(validateUpdateEventBody(body)).resolves.toEqual(expected)
+        return expect(validateUpdateEventBody(event, body)).resolves.toEqual(expected)
     })
 
-    test('validateUpdateEvent: only title, organizer, venu, description valid body', () => {
+    test('only title, organizer, venu, description valid body', () => {
         const body = { 
             title: 'Annual Meeting',
             organizer: 'Microsoft',
@@ -101,26 +152,78 @@ describe('validateUpdateEvent(body)', () => {
             description: 'This is annual general meeting of Microsoft.',
         }
     
-        return expect(validateUpdateEventBody(body)).resolves.toEqual(expected)
+        return expect(validateUpdateEventBody(event, body)).resolves.toEqual(expected)
     })
 
-    test('validateUpdateEvent: missing start and missing end date', () => {
+    test('missing start and missing end date', () => {
         const body = { 
             start: '2024-03-21',
             end: '15:00',
         }
     
-        return expect(validateUpdateEventBody(body))
+        return expect(validateUpdateEventBody(event, body))
                 .rejects.toThrow(InputValidationError)
     })
 
-    test('validateUpdateEvent: invalid status', () => {
+    test('invalid status', () => {
         const body = { 
             status: 'UNKNOWN'
         }
     
-        return expect(validateUpdateEventBody(body))
-                .rejects.toThrow(InputValidationError)
+        return expect(validateUpdateEventBody(event, body))
+                .rejects.toThrow(expect.objectContaining({
+                    name: 'InputValidationError',
+                    message: '["\\\"status\\\" must be one of [PENDING, RUNNING, CANCELED, FINISHED]"]'
+                }))
+    })
+
+    test('new end before existing start', () => {
+        const body = { 
+            end: '2024-03-21 10:00'
+        }
+    
+        return expect(validateUpdateEventBody(event, body))
+                    .rejects.toThrow(expect.objectContaining({
+                        name: 'InputValidationError',
+                        message: 'end must be after start'
+                    }))
+    })
+
+    test('new start after existing end', () => {
+        const body = { 
+            start: '2024-03-21 16:00'
+        }
+    
+        return expect(validateUpdateEventBody(event, body))
+                    .rejects.toThrow(expect.objectContaining({
+                        name: 'InputValidationError',
+                        message: 'end must be after start'
+                    }))
+    })
+
+    test('new start after new end', () => {
+        const body = { 
+            start: '2024-03-21 16:00',
+            end: '2024-03-21 15:00'
+        }
+    
+        return expect(validateUpdateEventBody(event, body))
+                    .rejects.toThrow(expect.objectContaining({
+                        name: 'InputValidationError',
+                        message: 'end must be after start'
+                    }))
+    })
+
+    test('new start after new end', () => {
+        const body = { 
+            unknown: 'unknown value'
+        }
+    
+        return expect(validateUpdateEventBody(event, body))
+                    .rejects.toThrow(expect.objectContaining({
+                        name: 'InputValidationError',
+                        message: '["\\\"unknown\\\" is not allowed"]'
+                    }))
     })
 })
 

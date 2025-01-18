@@ -45,7 +45,7 @@ const Sex = {
 
 const GuestStatus = {
 
-    NOTSET: 'NOTST', PRESENT: 'PRESENT', ABSENT: 'ABSENT',
+    NOTSET: 'NOTSET', PRESENT: 'PRESENT', ABSENT: 'ABSENT',
 
     values: () => enumValues(GuestStatus)
 }
@@ -269,10 +269,7 @@ class EventDB {
     // CRUD Methods For Guest
 
     async addGuestForEvent(eventId, input) {
-        if (!this.__hasEvent(eventId)) {
-            throw new EventDBError(`can not add guest to event ${eventId}; event does not exists`, errorcodes.NOT_FOUND)
-        }
-
+        
         const id = this.__generateGuestId()
         const newGuest = { id, eventId, ...input }
 
@@ -282,6 +279,7 @@ class EventDB {
             await this.__writeToFile()
 
             logger.info(`add guest for event ${eventId} saved successfully`)
+            logger.debug('saved guest ', { debugExtras: newGuest})
 
             return newGuest
         }

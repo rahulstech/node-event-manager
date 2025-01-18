@@ -1,6 +1,6 @@
 const express = require('express')
-const events_routes = require('./routes/events')
-const guests_routes = require('./routes/guests')
+const events_routes = require('./routes/EventRoutes.js')
+const guests_routes = require('./routes/GuestRoutes.js')
 const loggers = require('./utils/loggers.js') 
 
 const logger = loggers.logger.child({ 
@@ -22,7 +22,7 @@ server.get('/api/v1/events', events_routes.getAllEvents)
 
 server.get('/api/v1/events/filter', events_routes.filterEvents)
 
-server.get('/api/v1/events/:eventId', events_routes.getEventById)
+server.get('/api/v1/events/:eventId', events_routes.getGetEventByIdMiddleWares(), events_routes.getEventById)
 
 server.post('/api/v1/events', events_routes.getCreateEventMiddleWares(), events_routes.createEvent)
 
@@ -30,15 +30,15 @@ server.put('/api/v1/events/:eventId', events_routes.getUpdateEventMiddleWares(),
 
 // Guests realted routers
 
-server.get('/api/v1/events/:eventId/guests', guests_routes.getAllGuestsForEvent)
+server.get('/api/v1/events/:eventId/guests', guests_routes.getAllGuestsForEventMiddleWares(), guests_routes.getAllGuestsForEvent)
 
-server.get('/api/v1/events/:eventId/guests/search', guests_routes.searchEventGuests)
+server.get('/api/v1/events/:eventId/guests/search', guests_routes.getSearchGuestsForEventMiddleWares(), guests_routes.searchEventGuests)
 
 server.post('/api/v1/events/:eventId/guests', guests_routes.getAddGuestMiddleWares(), guests_routes.addGuestForEvent)
 
 server.put('/api/v1/guests/:guestId', guests_routes.getUpdateGuestMiddleWares(), guests_routes.updateGuest)
 
-server.delete('/api/v1/guests/:guestId', guests_routes.removeGuest)
+server.delete('/api/v1/guests/:guestId', guests_routes.getRemoveGuestMiddleWares(), guests_routes.removeGuest)
 
 // Error handling middleware
 

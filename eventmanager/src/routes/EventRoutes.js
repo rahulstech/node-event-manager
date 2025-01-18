@@ -1,8 +1,14 @@
 const { errorcodes, EventDB, EventDBError } = require('../database/eventsdb')
+
 const multer = require('multer')
+
 const utils = require('../utils/helpers')
+
 const loggers = require('../utils/loggers')
+
 const { mwCreateEventBodyValidator, mwUpdateEventBodyValidator } = require('../services/input_validation/EventInputValidationService')
+
+const { mwGetEventById } = require('../services/data_service/EventDataService')
 
 const logger = loggers.logger.child({ module: 'EventRoutes' })
 
@@ -26,42 +32,15 @@ const getAllEvents = (req, res) => {
     })
 }
 
+const getGetEventByIdMiddleWares = () => {
+    return mwGetEventById
+}
+
 const getEventById = (req, res) => {
-    const { eventId } = req.params
+    
+    const { event } = req.validParams
 
-    logger.info(`called: getEventById() and eventId = ${eventId}`)
-
-    const _id = Number(eventId)
-    try {
-        const event = eventdb.getEventById(_id)
-
-        if (null == event) {
-            logger.debug(`event with id ${eventId} = `, { debugExtras: event })
-
-            res.status(404).json({
-                code: 404,
-                message: `no event found with id ${eventId}`
-            })
-        }
-        else {
-            logger.debug(`no event with id ${eventId}`)
-
-            res.status(200).json({
-                code: 200,
-                message: "successful",
-                data: event
-            })
-        }
-    }
-    catch(err) {
-        logger.error(err)
-        if (err instanceof EventDBError && err.code == errorcodes.NOT_FOUND) {
-            return res.status(404).json({ code: 404, message: `no event found with id ${eventId}`})
-        }
-        else {
-            return res.status(500).json({ code: 500, message: 'internal server error'})
-        }
-    }
+    res.status(200).json({ code: 200, message: 'successful', data: event })
 }
 
 const filterEvents = (req, res) => {
@@ -104,9 +83,9 @@ const createEvent = async (req, res) => {
     // step2: add the event to database
     try {
         
-        const event = req.validBody
+        const { eventData } = req.validBody
 
-        const newEvent = await eventdb.createEvent(event)
+        const newEvent = await eventdb.createEvent(eventData)
 
         logger.info('new event saved successfully')
         logger.debug('new event ', { debugExtras: newEvent })
@@ -125,6 +104,8 @@ const createEvent = async (req, res) => {
 const getUpdateEventMiddleWares = () => {
     return [
         multer().none(), // extract body
+
+        mwGetEventById,
 
         mwUpdateEventBodyValidator // validate body
     ]
@@ -184,7 +165,8 @@ const updateEvent = async (req, res) => {
 }
 
 module.exports = {
-    getAllEvents, getEventById, filterEvents, 
+    getAllEvents, 
+    getGetEventByIdMiddleWares, getEventById, filterEvents, 
     getCreateEventMiddleWares, createEvent, 
     getUpdateEventMiddleWares, updateEvent
 }

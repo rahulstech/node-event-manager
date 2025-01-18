@@ -4,15 +4,20 @@ const utils = require('../../utils/helpers')
 class InputValidationError extends Error {
 
     constructor(reason) {
+        super()
+        
         if (reason instanceof joi.ValidationError) {
-            super(JSON.stringify(reason.details.map( d => d.message )))
+            const message = JSON.stringify( reason.details.map( d => d.message ))
+            this.message = message
         }
         else if (reason instanceof Error) {
-            super(reason.message)
+            this.message = reason.message
         }
         else {
-            super(reason)
+            this.message = reason
         }
+
+        this.name = this.constructor.name
     }
 }
 
@@ -21,8 +26,8 @@ const getJoiCustomDateTimeRule = () => (value, helpers) => {
         const validValue = utils.parseDateTime(value)
         return validValue
     }
-    catch(err) {
-        return helpers.error(err) // TODO: error in err code
+    catch(error) {
+        return helpers.error('any.custom', { error }) // TODO: provide good error message
     }
 }
 
