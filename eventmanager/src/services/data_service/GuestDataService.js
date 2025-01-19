@@ -4,7 +4,7 @@ const { errorcodes, EventDB, EventDBError, EventStatus } = require('../../databa
 
 const loggers = require('../../utils/loggers')
 
-const { pushValidBody, isDateTimeBetween } = require('../../utils/helpers')
+const { pushValidBody, pushValidParams } = require('../../utils/helpers')
 
 const logger = loggers.logger.child({ module: 'GuestDataService' })
 
@@ -100,6 +100,10 @@ const mwUpdateGuest = async (req, res, next) => {
 
         const data = { ...guest, ...guestData }
 
+        if ( !data.guest_image && guest.guest_image ) {
+            data.guest_image = guest.guest_image
+        }
+
         const updatedGuest = await eventdb.updateGuest(guestId, data)
 
         logger.info('guest updated successfully')
@@ -138,12 +142,18 @@ const mwRemoveGuest = async (req, res, next) => {
 
     const { guestId } = req.validParams
 
-    logger.log('will remove guest')
+    const { guest } = req.validBody
+
+    logger.info('will remove guest')
 
     try {
+        const removedGuest = { ...guest }
+
         await eventdb.removeGuest(guestId)
 
         logger.info('guest removed successfully')
+
+        pushValidBody(req, { removedGuest })
 
         next()
     }

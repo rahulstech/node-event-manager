@@ -1,29 +1,29 @@
-const { errorcodes, EventDB, EventDBError } = require('../database/eventsdb')
-
 const multer = require('multer')
-
-const utils = require('../utils/helpers')
 
 const loggers = require('../utils/loggers')
 
 const { mwCreateEventBodyValidator, mwUpdateEventBodyValidator } = require('../services/input_validation/EventInputValidationService')
 
-const { mwGetEventById } = require('../services/data_service/EventDataService')
+const { mwGetEventById, mwCreateEvent, mwUpdateEvent, mwGetAllEvents, mwFilterEvents } = require('../services/data_service/EventDataService')
 
 const logger = loggers.logger.child({ module: 'EventRoutes' })
 
-const eventdb = EventDB.create()
-
 // Read
+
+const getGetAllEventsMiddleWares = () => {
+    return [
+        mwGetAllEvents
+    ]
+}
 
 const getAllEvents = (req, res) => {
 
     logger.info('called getAllEvents()')
     
-    const events = eventdb.getAllEvents()
+    const { events } = req.validBody
 
-    logger.info('successfully fetched all events')
-    logger.debug('all events = ', { debugExtras: events })
+    logger.info('got all events')
+    logger.debug('all events ', { debugExtras: events })
 
     res.status(200).json({
         code: 200,
@@ -33,34 +33,40 @@ const getAllEvents = (req, res) => {
 }
 
 const getGetEventByIdMiddleWares = () => {
-    return mwGetEventById
+    return [
+        mwGetEventById
+    ]
 }
 
 const getEventById = (req, res) => {
+
+    logger.info('called getEventById()')
     
-    const { event } = req.validParams
+    const { eventId } = req.validParams
+    const { event } = req.validBody
+
+    logger.info(`event forund for id ${eventId}`)
+    logger.debug('event ', { debugExtras: event })
 
     res.status(200).json({ code: 200, message: 'successful', data: event })
+}
+
+const getFilterEventsMiddleWares = () => {
+    return [
+        mwFilterEvents
+    ]
 }
 
 const filterEvents = (req, res) => {
 
     logger.info('called filterEvents()')
-    console.debug('filterEvent query ', { debugExtras: req.query })
 
-    const { k, status, venu, organizer } = req.query
+    const { events } = req.validBody
 
-    try {
-        const events = eventdb.filterEvents(k, status, venu, organizer)
+    logger.info('events filtered successfully')
+    logger.info('filtered events ', { debugExtras: events })
 
-        logger.debug('filtered events = ', { debugExtras: events })
-
-        res.status(200).json({ code: 200, message: 'successful', data: events})
-    }
-    catch(err) {
-        logger.error(err)
-        return res.status(500).json({ code: 500, message: 'inter server error'})
-    }
+    res.status(200).json({ code: 200, message: 'successful', data: events})
 }
 
 // create
@@ -68,35 +74,23 @@ const filterEvents = (req, res) => {
 const getCreateEventMiddleWares = () => {
     return [
         multer().none(), // extract body
+        
         mwCreateEventBodyValidator, // validate body
+
+        mwCreateEvent // add in database
     ]
 }
 
-const createEvent = async (req, res) => {
-
-    // step1: invalidate inputs: all the title, organizer, venu, description, start, end must be set.
-    //        check start and end is a valid date time string in format yyyy-MM-dd HH:mm
-    //        if status not set then set default status to "PENDING"
+const createEvent = (req, res) => {
 
     logger.info('called createEvent()')
 
-    // step2: add the event to database
-    try {
-        
-        const { eventData } = req.validBody
+    const { newEvent } = req.validBody 
 
-        const newEvent = await eventdb.createEvent(eventData)
+    logger.info('event validated and created successfully')
+    logger.debug('saved event ', { debugExtras: newEvent})
 
-        logger.info('new event saved successfully')
-        logger.debug('new event ', { debugExtras: newEvent })
-
-        // step3: send the response
-        return res.status(200).json({ code: 200, message: "event saved", data: newEvent })
-    }
-    catch(err) {
-        logger.error('createEvent() encountered an error; ',err)
-        return res.status(500).json({ code: 500, message: "not saved"})
-    }
+    res.status(200).json({ code: 200, message: "event saved", data: newEvent })
 }
 
 // update
@@ -107,66 +101,32 @@ const getUpdateEventMiddleWares = () => {
 
         mwGetEventById,
 
-        mwUpdateEventBodyValidator // validate body
+        mwUpdateEventBodyValidator, // validate body
+
+        mwUpdateEvent // update in database
     ]
 }
 
 const updateEvent = async (req, res) => {
-    const { eventId } = req.params
+    
+    logger.info('called updateEvent()')
 
-    logger.info(`called updateEvent() and eventId = ${eventId}`)
-    logger.debug(`updateEvent() body = `, { debugExtras: req.body })
+    const { updatedEvent } = req.validBody
 
-    const { title, organizer, venu, description, start, end, status } = req.body
+    logger.info('event validated and updated successfully')
+    logger.debug('updated event', { debugExtras: updatedEvent})
 
-    const _id = Number(eventId)
-
-    let startDatetime = null
-    let endDatetime = null
-    if (start) {
-        try {
-            startDatetime = utils.parseDateTime(start)
-        }
-        catch(err) {
-            logger.error(err)
-            return res.status(400).json({ code: 400, message: `invalid end datetime '${start}'`})
-        }
-    }
-    if (end) {
-        try {
-            endDatetime = utils.parseDateTime(end)
-        }
-        catch(err) {
-            logger.error(err)
-            return res.status(4000).json({ code: 400, message: `invalid end datetime '${end}'`})
-        }
-    }
-
-    try {
-        const input = { title, organizer, venu, description, 
-            start: startDatetime, end: endDatetime, status }
-
-        const event = await eventdb.updateEvent(_id, input)
-
-        logger.info(`event with id ${eventId} updated successfully`)
-        logger.debug(`updated event = `, { debugExtras: event })
-            
-        res.status(200).json({ code: 200, message: 'event updated', data: event })
-    }
-    catch(err) {
-        logger.error(err)
-        if (err instanceof EventDBError && err.code == errorcodes.NOT_FOUND) {
-            return res.status(404).json({ code: 404, message: `no event found with id ${eventId}` })
-        }
-        else {
-            return res.status(500).json({ code: 500, message: 'internal server srror' })
-        }
-    }
+    res.status(200).json({ code: 200, message: 'event updated', data: updatedEvent })
 }
 
 module.exports = {
-    getAllEvents, 
-    getGetEventByIdMiddleWares, getEventById, filterEvents, 
+    getGetAllEventsMiddleWares, getAllEvents, 
+
+    getGetEventByIdMiddleWares, getEventById, 
+
+    getFilterEventsMiddleWares, filterEvents, 
+
     getCreateEventMiddleWares, createEvent, 
+
     getUpdateEventMiddleWares, updateEvent
 }

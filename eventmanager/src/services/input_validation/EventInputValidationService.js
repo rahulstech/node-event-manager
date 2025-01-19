@@ -56,7 +56,7 @@ const validateCreateEventBody = async ( body ) => {
         checkEndIsAfterStartExclusive(start, end)
 
         logger.info('create event body validated successfully')
-        logger.debug('valid value for create event ', { debugExtras: value })
+        logger.debug('valid body for create event ', { debugExtras: value })
 
         return value
     }
@@ -80,9 +80,12 @@ const mwCreateEventBodyValidator = async (req, res, next) => {
     }
 
     try {
-        const value = await validateCreateEventBody(req.body)
+        const eventData = await validateCreateEventBody(req.body)
 
-        pushValidBody(req, { eventData: value })
+        logger.info('event validated for create event successfully')
+        logger.debug('valid event data', { debugExtras: eventData })
+
+        pushValidBody(req, { eventData: eventData })
 
         next()
     }
@@ -136,7 +139,7 @@ const validateUpdateEventBody = async ( event, body ) => {
         }
 
         logger.info('update event body validated succesdfully')
-        logger.debug('valid valid for update event ', { debugExtras: value })
+        logger.debug('valid body for update event ', { debugExtras: value })
 
         return value
     }
@@ -166,9 +169,12 @@ const mwUpdateEventBodyValidator = async (req, res, next) => {
     }
 
     try {
-        const value = await validateUpdateEventBody(event, body)
+        const eventData = await validateUpdateEventBody(event, body)
 
-        req.validBody = value
+        logger.info('event validated successfully for update')
+        logger.debug('valid event data ', { debugExtras: eventData })
+
+        pushValidBody(req, { eventData })
 
         next()
     }

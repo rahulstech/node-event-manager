@@ -1,6 +1,6 @@
 const { EventStatus } = require('../database/eventsdb.js')
 
-const { isDateTimeBetween, formatDateTime, isDateTimeAfter } = require('../utils/helpers.js')
+const { isDateTimeBetween } = require('../utils/helpers.js')
 
 const multer = require('multer')
 
@@ -10,67 +10,94 @@ const { mwAddGuestForEventValidateBody, mwUpdateGuestValidateBody } = require('.
 
 const { mwGetEventById } = require('../services/data_service/EventDataService.js')
 
-const { mwGetAllGuestsForEvent, mwSearchGuestsForEvent, mwGetGuestById, mwAddGuest, mwRemoveGuest }
+const { mwGetAllGuestsForEvent, mwSearchGuestsForEvent, mwGetGuestById, mwAddGuest, mwRemoveGuest, mwUpdateGuest }
                         = require('../services/data_service/GuestDataService.js')
+
+const { RouteError } = require('./RouteError.js')
+
+const { rm } = require('node:fs/promises')
+
+const { existsSync } = require('node:fs')
+
+const path = require('node:path')
 
 const logger = loggers.logger.child({ module: 'GuestRoutes'})
 
 const multipart = multer({ dest: process.env.GUESTS_IMAGE_STORE })
 
-// Create Guest 
+const ensureConsistentGuestData = ( event, guestData ) => {
 
-const mwCheckConsistentGuestDataForAdd = (req, res, next) => {
+    const { start, end, status } = event
+    const { enter, exit } =  guestData
 
-    const { event, guestData } = req.validBody
-    const { id, start, end, status } = event
-    const { enter, exit, is_present } =  guestData // TODO: enter exit may be undefined or null
+    // if event is canceled or finished, update not allowed
 
     if (status === EventStatus.CANCELED || status === EventStatus.FINISHED) {
         logger.warn(`can not update guest for event with status ${EventStatus.CANCELED} or ${EventStatus.FINISHED}`)
-        logger.debug(`event id ${id} status ${start}`)
+        logger.debug(`event status ${status}`)
 
-        return res.status(422).json({ code: 422, messag: `event ${status}; can not update guest` })
+        throw new RouteError(`event status ${status}; can not modify guest`)
     }
 
-    // if (start && end) {
+    // check enter and exit is between event start and end
 
-    //     if (!isDateTimeBetween(enter, start, end) || !isDateTimeBetween(exit, start, end, true)) {
-    //         logger.warn('guest enter and/or exit is not between event start  and end time; can not update guest')
-    
-    //         logger.debug(`guest enter ${formatDateTime(enter)} exit ${formatDateTime(exit)} ` + 
-    //         ` event start ${formatDateTime(start)} and end ${formatDateTime(end)}`)
-    
-    //         return res.status(422).json({ code: 422, message: 'enter and/or exit date time exceeds event start and end date time' })
-    //     }
-    
-    //     if (enter && exit && !isDateTimeAfter(exit, enter, true)) {
-    //         logger.warn('guest exit is not after enter')
-    
-    //         logger.debug(`enter ${enter} exit ${exit}`)
-            
-    //         return res.status(422).json({ code: 422, message: 'exit must be after enter'})
-    //     }
+    let messages = []
+    let inconsistent = false
 
-    // }
-        
+    if (enter && !isDateTimeBetween(enter, start, end, true)) {
+        const message = '\"enter\" must be between event start and end'
+
+        messages.push(message)
+
+        inconsistent = true
+    }
+
+    if (exit && !isDateTimeBetween(exit, start, end, true)) {
+        const message = '"exit" must be between event start and end'
+
+        messages.push(message)
+
+        inconsistent = true
+    }
+
+    if (inconsistent) {
+        logger.warn('inconsistent guest update data found', { debugExtras: messages })
+
+        throw new RouteError(JSON.stringify(messages))
+    }
+}
+
+const mwCheckConsistentGuestData = (req, res, next) => {
+
+    const { event, guestData } = req.validBody
+    
+    try {
+        ensureConsistentGuestData(event, guestData)
+    }
+    catch(err) {
+        return res.status(422).json({ code: 422, message: err.message })
+    }
+    
     next()
 }
 
+// Create Guest 
+
 const getAddGuestMiddleWares = () => {
     return [
-        multipart.single('guest_image'), // extract body
+        mwGetEventById, // check and get event
 
-        mwGetEventById,
+        multipart.single('guest_image'), // extract body
 
         mwAddGuestForEventValidateBody, // validate body
 
-        // mwCheckConsistentGuestDataForAdd, 
+        mwCheckConsistentGuestData, // check consistency
 
-        mwAddGuest
+        mwAddGuest, // add in database 
     ]
 }
 
-const addGuestForEvent = async (req, res) => {
+const addGuestForEvent = (req, res) => {
     const { newGuest } = req.validBody
 
     logger.debug('new guest', { debugExtras: newGuest })
@@ -109,53 +136,49 @@ const searchEventGuests = (req, res) => {
 
 // Update Guest
 
-const mwCheckConsistentGuestDataForUpdate = (req, res, next) => {
 
-    const { event, guestData } = req.validBody
-    const { id, start, end, status } = event
-    const { enter, exit, is_present } =  guestData
+const mwDeleteGuestImageFileAfterUpdate = async (req, res, next) => {
+    
+    const { guest, updatedGuest } = req.validBody
+    const { guest_image } = guest
 
-    if (status === EventStatus.CANCELED || status === EventStatus.FINISHED) {
-        logger.warn('can not update guest for event with status ${EventStatus.CANCELED} or ${EventStatus.FINISHED}')
-        logger.debug(`event id ${id} status ${start}`)
-
-        return res.status(422).json({ code: 422, messag: `event ${status}; can not updated guest` })
+    if (updatedGuest && updatedGuest.guest_image === guest_image) {
+        // old guest image is not updated, don't delete it
+        next()
+        return
     }
-    if (!isDateTimeBetween(enter, start, end) || !isDateTimeBetween(exit, start, end, true)) {
-        logger.warn('guest enter and/or exit is not between event start  and end time; can not update guest')
 
-        logger.debug(`guest enter ${formatDateTime(enter)} exit ${formatDateTime(exit)} ` + 
-        ` event start ${formatDateTime(start)} and end ${formatDateTime(end)}`)
-
-        return res.status(422).json({ code: 422, message: 'enter and/or exit date time exceeds event start and end date time' })
+    try {
+        await rm(guest_image)
     }
-    if (enter && exit && !isDateTimeAfter(exit, enter, true)) {
-        logger.warn('guest exit is not after enter')
-
-        logger.debug(`enter ${enter} exit ${exit}`)
-        
-        return res.status(422).json({ code: 422, message: 'exit must be after enter'})
+    catch(err) {
+        logger.warn('mwDeleteGuestImageFileAfterUpdate() encountered an error; ', err)
+        logger.debug(`guest image ${guest_image}`)
     }
+
     next()
 }
 
 const getUpdateGuestMiddleWares = () => {
     return [
-        multipart.single('guest_image'), // extract body
-
         mwGetGuestById, // check and get guest
 
-        mwGetEventById, // get event
+        multipart.single('guest_image'), // extract body
 
         mwUpdateGuestValidateBody, // validate body
 
-        mwCheckConsistentGuestDataForUpdate, // 
+        mwGetEventById, // get event
+
+        mwCheckConsistentGuestData, // check consistency
+
+        mwUpdateGuest, // update in database
+
+        mwDeleteGuestImageFileAfterUpdate, // delete the old guest image file
     ]
 }
 
 const updateGuest = (req, res) => {
-    // TOOD: remove old guest image
-
+    
     const { updatedGuest } = req.validBody
 
     res.status(200).json({ code: 200, message: 'guest updated', data: updatedGuest })
@@ -163,22 +186,65 @@ const updateGuest = (req, res) => {
 
 // Delete Guest
 
+const mwDeleteGuestImageFileAfterRemove = async (req, res, next) => {
+    
+    const { removedGuest } = req.validBody
+    const { guest_image } = removedGuest
+
+    try {
+        await rm(guest_image)
+    }
+    catch(err) {
+        logger.warn('mwDeleteGuestImageFileAfterRemove() encountered an error; ', err)
+        logger.debug(`guest image ${guest_image}`)
+    }
+
+    next()
+}
+
 const getRemoveGuestMiddleWares = () => {
     return [
         mwGetGuestById,
-        mwRemoveGuest
+
+        mwRemoveGuest,
+
+        mwDeleteGuestImageFileAfterRemove,
     ]
 }
 
-const removeGuest = async (req, res) => {
-    // TODO: remove the guest image
-    res.status(204).json({ code: 204, message: 'guest removed'})
+const removeGuest = (req, res) => {
+    
+    res.status(200).json({ code: 200, message: 'guest removed'})
+}
+
+// Guest Image
+
+const getGuestImage = ( req, res) => {
+
+    const { guestImage } = req.params
+
+    try {
+        const guest_image_path = path.resolve(process.env.GUESTS_IMAGE_STORE, guestImage)
+        if (existsSync(guest_image_path)){ 
+            res.status(200).sendFile(guest_image_path)
+        }
+        else {
+            res.send(404).json({ code: 404, message: `not found`})
+        }
+    }
+    catch (err) {
+        logger.error('getGuestImage() encountered and error; ', err)
+
+        res.send(500).json({ code: 500, message: 'internal server error'})
+    }
 }
 
 module.exports = {
+    ensureConsistentGuestData,
     getAllGuestsForEventMiddleWares, getAllGuestsForEvent,
     getSearchGuestsForEventMiddleWares, searchEventGuests, 
     getAddGuestMiddleWares, addGuestForEvent,
     getUpdateGuestMiddleWares , updateGuest,
-    getRemoveGuestMiddleWares, removeGuest
+    getRemoveGuestMiddleWares, removeGuest,
+    getGuestImage
 }

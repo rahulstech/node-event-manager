@@ -273,6 +273,11 @@ class EventDB {
         const id = this.__generateGuestId()
         const newGuest = { id, eventId, ...input }
 
+        if (newGuest.is_present !== GuestStatus.PRESENT) {
+            newGuest.enter = null
+            newGuest.exit = null
+        }
+
         try {
             this.guests.set(id, newGuest)
 
@@ -294,16 +299,16 @@ class EventDB {
     __hasGuest(guestId) { return this.guests.has(guestId) }
 
     getAllGuestsForEvent(eventId) {
-        if (!this.__hasEvent(eventId)) {
-            throw new EventDBError(`event with id ${eventId} not found`, errorcodes.NOT_FOUND)
-        }
         const allGuests = this.guests
+
         const eventGuests = []
+
         for (const [ id, guest ] of allGuests) {
             if (guest.eventId === eventId) {
                 eventGuests.push(guest)
             }
         }
+        
         return eventGuests
     }
 
@@ -311,79 +316,65 @@ class EventDB {
         if (!this.__hasGuest(guestId)) {
             throw new EventDBError(`guest with id ${guestId} not found`, errorcodes.NOT_FOUND)
         }
+
         return this.guests.get(guestId)
     }
 
     filterGuestsForEvent(eventId, k) {
         const guests = this.getAllGuestsForEvent(eventId)
+
         const filtered = guests.filter( guest => guest.firstname.includes(k) || guest.lastname.includes(k ))
+
         return filtered
     }
 
-    async updateGuest(guestId, input) {
+    async updateGuest(guestId, guest) {
         const guests = this.guests
-        if (!this.__hasGuest(guestId)) {
-            throw new EventDBError(`guest with id ${guestId} not found`, errorcodes.NOT_FOUND)
-        }
-        const oldguest = guests.get(guestId)
-        const guest = { ...oldguest }
-        const { firstname, lastname, age, sex, guest_image_path, enter, exit, is_present } = input
 
-        if (firstname) {
-            guest.firstname = firstname
+        const oldGuest = guests.get(guestId)
+        
+        if (guest.is_present !== GuestStatus.PRESENT) {
+            guest.enter = null
+            guest.exit = null
         }
-        if (lastname) {
-            guest.lastname = lastname
-        }
-        if (age) {
-            guest.age = age
-        }
-        if (sex) {
-            guest.sex = sex
-        }
-        if (enter) {
-            guest.enter = enter
-        }
-        if (exit) {
-            guest.exit = exit
-        }
-        if (is_present) {
-            guest.is_present = is_present
-        }
-        if (guest_image_path) {
-            guest.guest_image_path = guest_image_path
-        }
-
+        
         try {
             guests.set(guestId, guest)
+
             await this.__writeToFile()
+
             logger.info(`updated guest with id ${guestId} saved succeessfully`)
+
             return guest
         }
         catch(err) {
-            guests.set(guestId, oldguest)
+            logger.error('updateGuest() encountered an error; ', err)
+
+            guests.set(guestId, oldGuest)
+
             throw new EventDBError('error updating guest', errorcodes.WRITE_ERROR)
         }
     }
 
     async removeGuest(guestId) {
-        const allGuests = this.guests
-        if (!this.__hasGuest(guestId)) {
-            throw new EventDBError(`guest with id ${guestId} not found`, errorcodes.NOT_FOUND)
-        }
+        const guests = this.guests
 
-        const guest = allGuests.get(guestId)
-
-        allGuests.delete(guestId)
+        const oldGuest = guests.get(guestId)
 
         try {
+            guests.delete(guestId)
+
             await this.__writeToFile()
-            logger.info(`remove guest with id ${guestId} saved successfully`)
+            
+            logger.info(`guest removed from database`)
 
             return true
         }
         catch(err) {
-            allGuests.set(guestId, guest)
+            logger.error('removeGuest() encountered an error; ', err)
+
+            guests.set(guestId, oldGuest)
+
             throw new EventDBError('error removing guest', errorcodes.WRITE_ERROR)
         }
     }

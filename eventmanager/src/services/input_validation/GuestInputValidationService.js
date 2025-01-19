@@ -2,7 +2,7 @@ const joi = require('joi')
 const { Sex, GuestStatus } = require('../../database/eventsdb')
 const loggers = require('../../utils/loggers')
 const { InputValidationError, getJoiCustomDateTimeRule } = require('./inputvalidator')
-const { pushValidBody } = require('../../utils/helpers')
+const { pushValidBody, isDateTimeAfter } = require('../../utils/helpers')
 
 const logger = loggers.logger.child({ module: 'GuestInputValidationService' })
 
@@ -22,7 +22,23 @@ const field_exit = joi.string().custom(getJoiCustomDateTimeRule())
                         
 const field_is_present = joi.string().valid(...GuestStatus.values())
 
-const field_guest_image_path = joi.string() // TODO: validate file path
+const field_guest_image = joi.string() // TODO: validate file path
+
+
+function checkEnterExitWhenPresent(value) {
+    const { enter, exit, is_present } = value
+
+    if (is_present && is_present === GuestStatus.PRESENT) {
+        if (enter && exit) {
+            if (!isDateTimeAfter(exit, enter, true)) {
+                throw new InputValidationError('exit must be after enter')
+            }
+        }
+        else {
+            throw new InputValidationError('enter and exit is required when is_present is PRESENT')
+        }
+    }
+}
 
 ////////////////////////////////////////
 ///      Validate Create Guest      ///
@@ -43,15 +59,17 @@ const schemaAddGuest = joi.object({
 
     is_present: field_is_present.default(GuestStatus.NOTSET),
 
-    guest_image_path: field_guest_image_path.required()
+    guest_image: field_guest_image.required()
 
 })
 
 const validateAddGuestBody = async ( body, file ) => {
     
     try {
-        const data = { ...body, guest_image_path: file.path }
+        const data = { ...body, guest_image: file.filename }
         const value = await schemaAddGuest.validateAsync( data, { abortEarly: false, allowUnknown: false })
+        
+        checkEnterExitWhenPresent(value)
 
         logger.info('add guest body validated successfully')
         logger.debug('add guest valid value ', { debugExtras: value })
@@ -59,6 +77,10 @@ const validateAddGuestBody = async ( body, file ) => {
         return value
     }
     catch(err) {
+        if (err instanceof InputValidationError) {
+            throw err
+        }
+
         throw new InputValidationError(err)
     }
 }
@@ -124,24 +146,30 @@ const schemaUpdateGuest = joi.object({
 
     is_present: field_is_present,
 
-    guest_image_path: field_guest_image_path
+    guest_image: field_guest_image
 })
 
 const validateUpdateGuestBody = async ( body, file ) => {
 
     try {
-        const { path } = file || {}
+        const { filename } = file || {}
 
-        const data  = { ...body,  guest_image_path: path }
+        const data  = { ...body,  guest_image: filename }
 
         const value = await schemaUpdateGuest.validateAsync(data, { abortEarly: false, allowUnknown: false })
-
+        
+        checkEnterExitWhenPresent(value)
+        
         logger.info('update guest body validated successfully')
         logger.debug('update guest valid value ', { debugExtras: value })
 
         return value
     }
     catch(err) {
+        if (err instanceof InputValidationError) {
+            throw err
+        }
+
         throw new InputValidationError(err)
     }
 }

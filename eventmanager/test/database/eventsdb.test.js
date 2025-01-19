@@ -130,24 +130,10 @@ describe('test guest CRUD operations', () => {
         return expect(instance.addGuestForEvent(2, guest)).resolves.toEqual(expected)
     })
 
-    test(`create new guest for event 10`, () => {
-        const guest = {
-            eventId: 10,
-            firstname: "guest5", lastname: "guest5", age: 27, sex: "FEMALE", guest_image_path: "guest5.jpg",
-            enter: null, exit: null, is_present: 'NOTSET'
-        }
-        
-        return expect(instance.addGuestForEvent(10, guest)).rejects.toThrow(EventDBError)
-    })
-
     test('get all guests for event 2', () => {
         const expected = [ guest2, guest3]
         const actual = instance.getAllGuestsForEvent(2)
         expect(actual).toEqual(expected)
-    })
-
-    test('get all guests for event 10', () => {
-        expect(() => { instance.getAllGuestsForEvent(10)}).toThrow(EventDBError)
     })
 
     test('get all guests for event 1', () => {
@@ -160,10 +146,6 @@ describe('test guest CRUD operations', () => {
         const expected = [ guest4 ]
         const actual = instance.filterGuestsForEvent(4, '4')
         expect(actual).toEqual(expected)
-    })
-
-    test('filter guest for event 10 by keyword \"4\" ', () => {
-        expect(() => instance.filterGuestsForEvent(10, '4')).toThrow(EventDBError)
     })
 
     test('filter guest for event 1 by keyword \"4\" ', () => {
@@ -183,24 +165,18 @@ describe('test guest CRUD operations', () => {
     })
 
     test('update guest 1', () => {
-        const input = {
+        const guestData = {
+            id: 1, eventId: 4,
             firstname: "guest1 updated", lastname: "guest1 updated", age: 26, sex: "FEMALE", guest_image_path: "guest1_updated.jpg",
             enter: new Date(2026,5,16,16,0), exit: new Date(2026,5,16,16,0), is_present: 'PRESENT'
         }
 
-        const expected = { id: 1, eventId: 4, ...input}
-        return expect(instance.updateGuest(1, input)).resolves.toEqual(expected)
-    })
+        const expected = { ...guestData }
 
-    test('update guest 10', () => {
-        return expect(instance.updateGuest(10, {})).rejects.toThrow(EventDBError)
+        return expect(instance.updateGuest(1, guestData )).resolves.toEqual(expected)
     })
 
     test('remove guest 1', () => {
         return expect(instance.removeGuest(1)).resolves.not.toThrow()
-    })
-
-    test('remove guest 10', () => {
-        return expect(instance.removeGuest(10)).rejects.toThrow(EventDBError)
     })
 })

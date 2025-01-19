@@ -18,9 +18,9 @@ server.use((req, res, next) => {
 
 // Events related routers
 
-server.get('/api/v1/events', events_routes.getAllEvents)
+server.get('/api/v1/events',events_routes.getGetAllEventsMiddleWares(), events_routes.getAllEvents)
 
-server.get('/api/v1/events/filter', events_routes.filterEvents)
+server.get('/api/v1/events/filter', events_routes.getFilterEventsMiddleWares(), events_routes.filterEvents)
 
 server.get('/api/v1/events/:eventId', events_routes.getGetEventByIdMiddleWares(), events_routes.getEventById)
 
@@ -39,6 +39,8 @@ server.post('/api/v1/events/:eventId/guests', guests_routes.getAddGuestMiddleWar
 server.put('/api/v1/guests/:guestId', guests_routes.getUpdateGuestMiddleWares(), guests_routes.updateGuest)
 
 server.delete('/api/v1/guests/:guestId', guests_routes.getRemoveGuestMiddleWares(), guests_routes.removeGuest)
+
+server.get('/guest_images/:guestImage', guests_routes.getGuestImage)
 
 // Error handling middleware
 
