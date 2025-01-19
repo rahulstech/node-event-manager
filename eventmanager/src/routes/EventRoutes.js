@@ -2,11 +2,40 @@ const multer = require('multer')
 
 const loggers = require('../utils/loggers')
 
-const { mwCreateEventBodyValidator, mwUpdateEventBodyValidator } = require('../services/input_validation/EventInputValidationService')
+const { mwCreateEventBodyValidator, mwUpdateEventBodyValidator } 
+        = require('../services/input_validation/EventInputValidationService')
 
-const { mwGetEventById, mwCreateEvent, mwUpdateEvent, mwGetAllEvents, mwFilterEvents } = require('../services/data_service/EventDataService')
+const { mwGetEventById, mwCreateEvent, mwUpdateEvent, mwGetAllEvents, mwFilterEvents } 
+        = require('../services/data_service/EventDataService')
+
+const { Router } = require('express')
+
 
 const logger = loggers.logger.child({ module: 'EventRoutes' })
+
+// create
+
+const getCreateEventMiddleWares = () => {
+    return [
+        multer().none(), // extract body
+        
+        mwCreateEventBodyValidator, // validate body
+
+        mwCreateEvent // add in database
+    ]
+}
+
+const createEvent = (req, res) => {
+
+    logger.info('called createEvent()')
+
+    const { newEvent } = req.validBody 
+
+    logger.info('event validated and created successfully')
+    logger.debug('saved event ', { debugExtras: newEvent})
+
+    res.status(200).json({ code: 200, message: "event saved", data: newEvent })
+}
 
 // Read
 
@@ -69,30 +98,6 @@ const filterEvents = (req, res) => {
     res.status(200).json({ code: 200, message: 'successful', data: events})
 }
 
-// create
-
-const getCreateEventMiddleWares = () => {
-    return [
-        multer().none(), // extract body
-        
-        mwCreateEventBodyValidator, // validate body
-
-        mwCreateEvent // add in database
-    ]
-}
-
-const createEvent = (req, res) => {
-
-    logger.info('called createEvent()')
-
-    const { newEvent } = req.validBody 
-
-    logger.info('event validated and created successfully')
-    logger.debug('saved event ', { debugExtras: newEvent})
-
-    res.status(200).json({ code: 200, message: "event saved", data: newEvent })
-}
-
 // update
 
 const getUpdateEventMiddleWares = () => {
@@ -119,14 +124,24 @@ const updateEvent = async (req, res) => {
     res.status(200).json({ code: 200, message: 'event updated', data: updatedEvent })
 }
 
-module.exports = {
-    getGetAllEventsMiddleWares, getAllEvents, 
+// Routes
 
-    getGetEventByIdMiddleWares, getEventById, 
+const router1 = Router();
 
-    getFilterEventsMiddleWares, filterEvents, 
+router1.get('/events', getGetAllEventsMiddleWares(), getAllEvents)
 
-    getCreateEventMiddleWares, createEvent, 
+router1.get('/events/filter', getFilterEventsMiddleWares, filterEvents)
 
-    getUpdateEventMiddleWares, updateEvent
-}
+router1.get('/events/:eventId', getGetEventByIdMiddleWares(), getEventById)
+
+router1.post('/events', getCreateEventMiddleWares(), createEvent)
+
+router1.put('/events/:eventId', getUpdateEventMiddleWares(), updateEvent)
+
+
+
+module.exports.eventRoutes = {
+        api: {
+            v1: router1,
+        }  
+    }

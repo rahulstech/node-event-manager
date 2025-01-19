@@ -1,13 +1,17 @@
 const express = require('express')
-const events_routes = require('./routes/EventRoutes.js')
-const guests_routes = require('./routes/GuestRoutes.js')
+
 const loggers = require('./utils/loggers.js') 
+
+const { apiRoutes } = require('./endpoints/api.js')
+
+const { guestRoutes } = require('./routes/GuestRoutes.js')
 
 const logger = loggers.logger.child({ 
     module: 'EventManager',
 })
 
 const server = express()
+exports.server = server
 
 // global middlewares
 
@@ -16,50 +20,11 @@ server.use((req, res, next) => {
     next()
 })
 
-// Events related routers
+// api routes
 
-server.get('/api/v1/events',events_routes.getGetAllEventsMiddleWares(), events_routes.getAllEvents)
+server.use('/', apiRoutes)
 
-server.get('/api/v1/events/filter', events_routes.getFilterEventsMiddleWares(), events_routes.filterEvents)
-
-server.get('/api/v1/events/:eventId', events_routes.getGetEventByIdMiddleWares(), events_routes.getEventById)
-
-server.post('/api/v1/events', events_routes.getCreateEventMiddleWares(), events_routes.createEvent)
-
-server.put('/api/v1/events/:eventId', events_routes.getUpdateEventMiddleWares(), events_routes.updateEvent)
-
-// Guests realted routers
-
-server.get('/api/v1/events/:eventId/guests', guests_routes.getAllGuestsForEventMiddleWares(), guests_routes.getAllGuestsForEvent)
-
-server.get('/api/v1/events/:eventId/guests/search', guests_routes.getSearchGuestsForEventMiddleWares(), guests_routes.searchEventGuests)
-
-server.post('/api/v1/events/:eventId/guests', guests_routes.getAddGuestMiddleWares(), guests_routes.addGuestForEvent)
-
-server.put('/api/v1/guests/:guestId', guests_routes.getUpdateGuestMiddleWares(), guests_routes.updateGuest)
-
-server.delete('/api/v1/guests/:guestId', guests_routes.getRemoveGuestMiddleWares(), guests_routes.removeGuest)
-
-server.get('/guest_images/:guestImage', guests_routes.getGuestImage)
-
-// Error handling middleware
-
-server.all('*', (req, res) => {
-    logger.info(`${req.method} ${req.url} Not Found`)
-    res.status(404).json({
-        code: 404,
-        message: 'Not Found'
-    })
-})
-
-server.use((err, req, res, next) => {
-    logger.error(err)
-    res.status(500).json({
-        code: 500,
-        message: 'Internal Server Error'
-    })
-})
+server.use('/', guestRoutes.guestImages)
 
 
 server.listen(process.env.SERVER_PORT, () => logger.info(`server is listening on port ${process.env.SERVER_PORT}`))
-

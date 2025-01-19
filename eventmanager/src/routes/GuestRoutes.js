@@ -21,6 +21,8 @@ const { existsSync } = require('node:fs')
 
 const path = require('node:path')
 
+const { Router } = require('express')
+
 const logger = loggers.logger.child({ module: 'GuestRoutes'})
 
 const multipart = multer({ dest: process.env.GUESTS_IMAGE_STORE })
@@ -239,12 +241,33 @@ const getGuestImage = ( req, res) => {
     }
 }
 
-module.exports = {
-    ensureConsistentGuestData,
-    getAllGuestsForEventMiddleWares, getAllGuestsForEvent,
-    getSearchGuestsForEventMiddleWares, searchEventGuests, 
-    getAddGuestMiddleWares, addGuestForEvent,
-    getUpdateGuestMiddleWares , updateGuest,
-    getRemoveGuestMiddleWares, removeGuest,
-    getGuestImage
+/** Routers */
+
+// api v1
+
+const router1 = Router()
+
+router1.get('/events/:eventId/guests', getAllGuestsForEventMiddleWares(), getAllGuestsForEvent)
+
+router1.get('/events/:eventId/guests/search', getSearchGuestsForEventMiddleWares(), searchEventGuests)
+
+router1.post('/events/:eventId/guests', getAddGuestMiddleWares(), addGuestForEvent)
+
+router1.put('/guests/:guestId', getUpdateGuestMiddleWares(), updateGuest)
+
+router1.delete('/guests/:guestId', getRemoveGuestMiddleWares(), removeGuest)
+
+// guest images
+
+const routerGuestImages = Router()
+
+routerGuestImages.get('/guest_images/:guestImage', getGuestImage)
+
+module.exports.guestRoutes = { 
+
+    api: {
+        v1: router1
+    },
+
+    guestImages: routerGuestImages
 }

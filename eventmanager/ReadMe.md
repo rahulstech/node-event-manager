@@ -16,6 +16,7 @@ For data storage json files are used. Each event data with guest list is stoted 
 8. update guest: firstname, lastname, photo, is present, sex, age, enter and exit date time
 9. delete guest by id
 10. search guest by keyword matched first or last name
+11. get the guest image file
 
 ## API
 
@@ -31,6 +32,7 @@ For data storage json files are used. Each event data with guest list is stoted 
 |8. **PUT**|`/api/v1/guests/:guestId`|`multipart/form-data`|`application/json`| updated the guest by `guestId` and returns the updated guest |
 |9. **DELETE**|`/api/v1/guests/:guestId`||`application/json`| deletes the guest by `guestId` |
 |10. **GET**|`/api/v1/events/:eventId/guests/search?k=***`||`application/json`| searchs guests that contain the key word in first name and/or last and returns a list of matched guests for the event with id `eventId` |
+|11. **GET**|`/guest_images/:guestImage`||binary| returns guest image |
 
 ### Sample Response
 
@@ -192,10 +194,10 @@ For data storage json files are used. Each event data with guest list is stoted 
                     "lastname": "person1 ln",
                     "age": 34,
                     "sex": "MALE",
-                    "guest_image_path": "/path/to/guest/image/image.ext",
+                    "guest_image": "rs25fhabes85fegabse54fbca47egsb",
                     "is_present": "NOTSET",
-                    "enter": "2023-05-15 14:46",
-                    "exit": "2023-05-15 15:55"
+                    "enter": null,
+                    "exit": null
                 },
                 {
                     "id": 2,
@@ -204,10 +206,10 @@ For data storage json files are used. Each event data with guest list is stoted 
                     "lastname": "person2 ln",
                     "age": 28,
                     "sex": "FEMALE",
-                    "guest_image_path": "/path/to/guest/image/image.ext",
+                    "guest_image": "rs25fhabes85fegabse54fbca47egsb",
                     "is_present": "NOTSET",
-                    "enter": "2023-05-15 14:15",
-                    "exit": "2023-05-15 16:15"
+                    "enter": null,
+                    "exit": null
                 },
             ],
         }
@@ -236,10 +238,10 @@ For data storage json files are used. Each event data with guest list is stoted 
             "lastname": "person1 ln",
             "age": 34,
             "sex": "MALE",
-            "guest_image_path": "/path/to/guest/image/image.ext",
+            "guest_image": "rs25fhabes85fegabse54fbca47egsb",
             "is_present": "NOTSET",
-            "enter": "2023-05-15 14:46",
-            "exit": "2023-05-15 15:55"
+            "enter": null,
+            "exit": null
         }
     }
     ```
@@ -268,8 +270,8 @@ For data storage json files are used. Each event data with guest list is stoted 
             "lastname": "person1 ln",
             "age": 34,
             "sex": "MALE",
-            "guest_image_path": "/path/to/guest/image/image.ext",
-            "is_present": "NOTSET",
+            "guest_image": "rs25fhabes85fegabse54fbca47egsb",
+            "is_present": "PRESENT",
             "enter": "2023-05-15 14:46",
             "exit": "2023-05-15 15:55"
         }
@@ -329,10 +331,10 @@ For data storage json files are used. Each event data with guest list is stoted 
                     "lastname": "person1 ln",
                     "age": 34,
                     "sex": "MALE",
-                    "guest_image_path": "/path/to/guest/image/image.ext",
-                    "is_present": "NOTSET",
-                    "enter": "2023-05-15 14:46",
-                    "exit": "2023-05-15 15:55"
+                    "guest_image": "rs25fhabes85fegabse54fbca47egsb",
+                    "is_present": "ABSENT",
+                    "enter": null,
+                    "exit": null
                 },
                 {
                     "id": 2,
@@ -341,8 +343,8 @@ For data storage json files are used. Each event data with guest list is stoted 
                     "lastname": "person2 ln",
                     "age": 28,
                     "sex": "FEMALE",
-                    "guest_image_path": "/path/to/guest/image/image.ext",
-                    "is_present": "NOTSET",
+                    "guest_image": "rs25fhabes85fegabse54fbca47egsb",
+                    "is_present": "PRESENT",
                     "enter": "2023-05-15 14:15",
                     "exit": "2023-05-15 16:15"
                 },
