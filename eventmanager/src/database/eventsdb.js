@@ -222,34 +222,14 @@ class EventDB {
 
     async updateEvent(eventId, input) {
         const events = this.events
+
         if (!this.__hasEvent(eventId)) {
             throw new EventDBError(`event with id ${eventId} does not exists`, errorcodes.NOT_FOUND)
         }
-        const oldEvent = events.get(eventId)
-        const event = { ...oldEvent }
-        const { title, organizer, venu, description, start, end, status } = input
 
-        if (title) {
-            event.title = title
-        }
-        if (organizer) {
-            event.organizer = organizer
-        }
-        if (venu) {
-            event.venu = venu
-        }
-        if (description) {
-            event.description = input.description
-        }
-        if (status) {
-            event.status = status
-        }
-        if (start) {
-            event.start = start
-        }
-        if (end) {
-            event.end = end
-        }
+        const oldEvent = events.get(eventId)
+
+        const event = { ...oldEvent, ...input }
 
         try {
             events.set(eventId, event)
@@ -262,6 +242,7 @@ class EventDB {
         }
         catch(err) {
             events.set(eventId, oldEvent)
+
             throw new EventDBError('error updating event', errorcodes.WRITE_ERROR)
         }
     }
@@ -317,7 +298,9 @@ class EventDB {
             throw new EventDBError(`guest with id ${guestId} not found`, errorcodes.NOT_FOUND)
         }
 
-        return this.guests.get(guestId)
+        const guest = this.guests.get(guestId)
+        
+        return { ...guest }
     }
 
     filterGuestsForEvent(eventId, k) {
@@ -328,17 +311,23 @@ class EventDB {
         return filtered
     }
 
-    async updateGuest(guestId, guest) {
+    async updateGuest(guestId, input) {
         const guests = this.guests
+
+        if (!this.__hasGuest(guestId)) {
+            throw new EventDBError(`no guest found for id ${guestId}`, errorcodes.NOT_FOUND)
+        }
 
         const oldGuest = guests.get(guestId)
         
-        if (guest.is_present !== GuestStatus.PRESENT) {
-            guest.enter = null
-            guest.exit = null
+        if (input.is_present !== GuestStatus.PRESENT) {
+            input.enter = null
+            input.exit = null
         }
-        
+
         try {
+            const guest = { ...oldGuest, ...input }
+
             guests.set(guestId, guest)
 
             await this.__writeToFile()

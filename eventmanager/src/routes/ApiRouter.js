@@ -1,10 +1,17 @@
 const { Router } = require('express')
-const { eventRoutes } = require('../routes/EventRoutes.js')
-const { guestRoutes } = require('../routes/GuestRoutes.js')
+
+const { eventRoutes } = require('./EventRoutes.js')
+
+const { guestRoutes } = require('./GuestRoutes.js')
+
+const { AppError } = require('../utils/errors.js')
+
 const loggers = require('../utils/loggers.js') 
 
+
+
 const logger = loggers.logger.child({ 
-    module: 'ApiEndPoint',
+    module: 'ApiRouter',
 })
 
 const apiRoutes = Router()
@@ -24,20 +31,23 @@ apiRoutes.use('/api', v1)
 
 apiRoutes.all('*', (req, res) => {
     logger.info(`${req.method} ${req.url} Not Found`)
-    res.status(404).json({
-        code: 404,
-        message: 'Not Found'
-    })
+    throw new AppError(`${req.method} ${req.url} Not Found`, 404)
 })
 
 // 500 Internal Server Error
 
 apiRoutes.use((err, req, res, next) => {
+
     logger.error(err)
-    res.status(500).json({
-        code: 500,
-        message: 'Internal Server Error'
-    })
+
+    if (err instanceof AppError) {
+        const { statusCode, message } = err
+        if (statusCode !== 500) {
+            return res.status(err.statusCode).json({ code: statusCode, message })
+        }    
+    }
+
+    res.status(500).json({ code: 500, message: 'Internal Server Error' })
 })
 
 module.exports = { apiRoutes }

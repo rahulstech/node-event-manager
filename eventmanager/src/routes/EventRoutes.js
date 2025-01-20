@@ -1,144 +1,40 @@
 const multer = require('multer')
 
+const { Router } = require('express')
+
 const loggers = require('../utils/loggers')
 
-const { mwCreateEventBodyValidator, mwUpdateEventBodyValidator } 
-        = require('../services/input_validation/EventInputValidationService')
+const { mwCreateEventBodyValidator, mwUpdateEventBodyValidator, mwGetEventByIdValidator, mwFilterEventsValidator } 
+        = require('../services/inputValidation/EventInputValidationService')
 
-const { mwGetEventById, mwCreateEvent, mwUpdateEvent, mwGetAllEvents, mwFilterEvents } 
-        = require('../services/data_service/EventDataService')
+const { createEvent, 
+    
+        getAllEvents, filterEvents, getEventById ,
 
-const { Router } = require('express')
+        updateEvent
+
+     } = require('../controllers/api/EventController')
+
+
+
+const { catchRequestHandlerAsync } = require('../utils/errors')
 
 
 const logger = loggers.logger.child({ module: 'EventRoutes' })
-
-// create
-
-const getCreateEventMiddleWares = () => {
-    return [
-        multer().none(), // extract body
-        
-        mwCreateEventBodyValidator, // validate body
-
-        mwCreateEvent // add in database
-    ]
-}
-
-const createEvent = (req, res) => {
-
-    logger.info('called createEvent()')
-
-    const { newEvent } = req.validBody 
-
-    logger.info('event validated and created successfully')
-    logger.debug('saved event ', { debugExtras: newEvent})
-
-    res.status(200).json({ code: 200, message: "event saved", data: newEvent })
-}
-
-// Read
-
-const getGetAllEventsMiddleWares = () => {
-    return [
-        mwGetAllEvents
-    ]
-}
-
-const getAllEvents = (req, res) => {
-
-    logger.info('called getAllEvents()')
-    
-    const { events } = req.validBody
-
-    logger.info('got all events')
-    logger.debug('all events ', { debugExtras: events })
-
-    res.status(200).json({
-        code: 200,
-        message: "successful",
-        data: events
-    })
-}
-
-const getGetEventByIdMiddleWares = () => {
-    return [
-        mwGetEventById
-    ]
-}
-
-const getEventById = (req, res) => {
-
-    logger.info('called getEventById()')
-    
-    const { eventId } = req.validParams
-    const { event } = req.validBody
-
-    logger.info(`event forund for id ${eventId}`)
-    logger.debug('event ', { debugExtras: event })
-
-    res.status(200).json({ code: 200, message: 'successful', data: event })
-}
-
-const getFilterEventsMiddleWares = () => {
-    return [
-        mwFilterEvents
-    ]
-}
-
-const filterEvents = (req, res) => {
-
-    logger.info('called filterEvents()')
-
-    const { events } = req.validBody
-
-    logger.info('events filtered successfully')
-    logger.info('filtered events ', { debugExtras: events })
-
-    res.status(200).json({ code: 200, message: 'successful', data: events})
-}
-
-// update
-
-const getUpdateEventMiddleWares = () => {
-    return [
-        multer().none(), // extract body
-
-        mwGetEventById,
-
-        mwUpdateEventBodyValidator, // validate body
-
-        mwUpdateEvent // update in database
-    ]
-}
-
-const updateEvent = async (req, res) => {
-    
-    logger.info('called updateEvent()')
-
-    const { updatedEvent } = req.validBody
-
-    logger.info('event validated and updated successfully')
-    logger.debug('updated event', { debugExtras: updatedEvent})
-
-    res.status(200).json({ code: 200, message: 'event updated', data: updatedEvent })
-}
 
 // Routes
 
 const router1 = Router();
 
-router1.get('/events', getGetAllEventsMiddleWares(), getAllEvents)
+router1.get('/events', catchRequestHandlerAsync(getAllEvents))
 
-router1.get('/events/filter', getFilterEventsMiddleWares, filterEvents)
+router1.get('/events/filter', catchRequestHandlerAsync(mwFilterEventsValidator), catchRequestHandlerAsync(filterEvents))
 
-router1.get('/events/:eventId', getGetEventByIdMiddleWares(), getEventById)
+router1.get('/events/:eventId', catchRequestHandlerAsync(mwGetEventByIdValidator), catchRequestHandlerAsync(getEventById))
 
-router1.post('/events', getCreateEventMiddleWares(), createEvent)
+router1.post('/events', multer().none(), catchRequestHandlerAsync(mwCreateEventBodyValidator)  , catchRequestHandlerAsync(createEvent))
 
-router1.put('/events/:eventId', getUpdateEventMiddleWares(), updateEvent)
-
-
+router1.put('/events/:eventId', multer().none(), catchRequestHandlerAsync(mwUpdateEventBodyValidator)  , catchRequestHandlerAsync(updateEvent))
 
 module.exports.eventRoutes = {
         api: {

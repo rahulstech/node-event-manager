@@ -1,5 +1,5 @@
 const joi = require('joi')
-const { getJoiCustomDateTimeRule } = require("../../../src/services/input_validation/inputvalidator")
+const { getJoiCustomDateTimeRule } = require("../../../src/services/inputValidation/inputvalidator")
 
 describe('getJoiCustomDateTimeRule()', () => {
 

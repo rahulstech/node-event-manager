@@ -59,6 +59,16 @@ const pushValidParams = (req, what) => {
     }
 }
 
+const pushValidQuery = (req, what) => {
+    const validQuery = req.validQuery
+    if (!validQuery) {
+        req.validQuery = { ...what }
+    }
+    else {
+        req.validQuery = { ...validQuery, ...what }
+    }
+}
+
 const isDateTimeBetween = (testDt, startDt, endDt, inclusive = true) => {
     return isDateTimeBefore(testDt, endDt, inclusive) && isDateTimeAfter( testDt, startDt, inclusive)
 }
@@ -81,5 +91,5 @@ const isDateTimeAfter = (testDt, startDt, inclusive = false ) => {
 module.exports = {
     DateTimeError,
     parseDateTime, formatDateTime, isDateTimeBetween, isDateTimeBefore, isDateTimeAfter,
-    pushValidBody, pushValidParams,
+    pushValidBody, pushValidParams, pushValidQuery
 }

@@ -1,9 +1,9 @@
 
-require('../mocks/mock_eventsdb').mockEventDB()
+require('../../mocks/mock_eventsdb').mockEventDB()
 
-const { EventStatus } = require("../../src/database/eventsdb")
+const { EventStatus } = require("../../../src/database/eventsdb")
 
-const { ensureConsistentGuestData } = require("../../src/routes/GuestRoutes")
+const { ensureConsistentGuestData } = require("../../../src/services/dataService/GuestDataService")
 
 describe('ensureConsistentGuestData', () => {
 
@@ -56,8 +56,6 @@ describe('ensureConsistentGuestData', () => {
     
         expect(() => ensureConsistentGuestData(event, guestData))
         .toThrow(expect.objectContaining({
-            name: 'RouteError',
-
             message: '["\\\"enter\\\" must be between event start and end"]'
         }))
     })
@@ -79,8 +77,6 @@ describe('ensureConsistentGuestData', () => {
     
         expect(() => ensureConsistentGuestData(event, guestData))
         .toThrow(expect.objectContaining({
-            name: 'RouteError',
-
             message: '["\\\"exit\\\" must be between event start and end"]'
         }))
     })
@@ -93,7 +89,6 @@ describe('ensureConsistentGuestData', () => {
         const guestData = {}
     
         expect(() => ensureConsistentGuestData(event, guestData)).toThrow(expect.objectContaining({
-            name: 'RouteError',
             message: 'event status CANCELED; can not modify guest'
         }))
     })
@@ -106,7 +101,6 @@ describe('ensureConsistentGuestData', () => {
         const guestData = {}
     
         expect(() => ensureConsistentGuestData(event, guestData)).toThrow(expect.objectContaining({
-            name: 'RouteError',
             message: 'event status FINISHED; can not modify guest'
         }))
     })
