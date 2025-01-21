@@ -11,3 +11,5 @@ multer-tutorial/uploads/
 winston-tutorial/logs/
 
 package-lock.json
+
+sequelize-tutorial/database/
