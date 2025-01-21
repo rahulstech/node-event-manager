@@ -3,6 +3,7 @@ const { readFile, writeFile } = require('node:fs/promises')
 const { existsSync } = require('node:fs')
 const path = require('node:path')
 const loggers = require('../utils/loggers')
+const { AppError } = require('../utils/errors')
 
 const FILE_NAME = 'events.json'
 
@@ -21,11 +22,25 @@ const errorcodes = {
     NOT_FOUND: 'NOT FOUND',
 }
 
-class EventDBError extends Error {
+class EventDBError extends AppError {
 
     constructor(message='', code=null) {
         super(message)
         this.code = code
+        this.isOperational = true
+        switch(code) {
+            case errorcodes.NOT_FOUND: this.statusCode = 404
+            break
+
+            case errorcodes.READ_ERROR:
+            case errorcodes.WRITE_ERROR: {
+                this.statusCode = 500
+                this.isOperational = false
+            }
+            break
+
+            default: this.statusCode = 500; break
+        }
     }
 }
 

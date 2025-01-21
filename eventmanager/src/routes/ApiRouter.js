@@ -47,7 +47,7 @@ apiRoutes.use((err, req, res, next) => {
         }    
     }
 
-    res.status(500).json({ code: 500, message: 'Internal Server Error' })
+    res.status(500).json({ code: 500, message: 'internal server error' })
 })
 
 module.exports = { apiRoutes }

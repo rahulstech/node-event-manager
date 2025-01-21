@@ -12,7 +12,7 @@ const eventsdb = EventDB.create()
 
 function checkEndIsAfterStartExclusive(start, end) {
     if (!isDateTimeAfter(end, start)) {
-        throw new AppError('end must be after start', 400)
+        throw new AppError('"end" must be after "start"', 400)
     }
 }
 
@@ -22,53 +22,25 @@ const addEvent = async ( eventData ) => {
 
     checkEndIsAfterStartExclusive(start, end)
 
-    try {
-        const newEvent = await eventsdb.createEvent(eventData)
+    const newEvent = await eventsdb.createEvent(eventData)
 
-        return newEvent
-    }
-    catch(err) {
-        throw AppError(err.message)
-    }
+    return newEvent
 }
 
 const getAllEvents = async () => {
+    const events = await eventsdb.getAllEvents()
+    return events
 
-    try {
-        const events = await eventsdb.getAllEvents()
-
-        return events
-    }
-    catch(err) {
-        throw new AppError(err.message)
-    }
 }
 
 const getEventById = async ( eventId ) => {
-
-    try {
-        const event = await eventsdb.getEventById(eventId)
-
-        return event
-    }
-    catch(err) {
-        if (err instanceof EventDBError && err.code === errorcodes.NOT_FOUND) {
-            throw new AppError(err.message, 404)
-        }
-
-        throw new AppError(err.message)
-    }
+    const event = await eventsdb.getEventById(eventId)
+    return event
 }
 
 const filterEvents = async ({ k, status, venu, organizer }) => {
-    try {
-        const events = await eventsdb.filterEvents(k, status, venu, organizer)
-
-        return events
-    }
-    catch(err) {
-        throw new AppError(err.message)
-    }
+    const events = await eventsdb.filterEvents(k, status, venu, organizer)
+    return events
 }
 
 const setEvent = async ( eventId, eventData ) => {
@@ -82,54 +54,37 @@ const setEvent = async ( eventId, eventData ) => {
 
     const { start: newStart, end: newEnd } = eventData
 
-    try {
-        const event = await eventsdb.getEventById(eventId)
+    const event = await eventsdb.getEventById(eventId)
 
-        const { status, start, end } = event
+    const { status, start, end } = event
 
-        // if event status is CANCELED or FINISED can not update
+    // if event status is CANCELED or FINISED can not update
 
-        if (status === EventStatus.CANCELED || status === EventStatus.FINISHED) {
-            throw new AppError(`can not update event with status ${status}`, 422)
-        }
-
-        // ensure end > start
-
-        if (newStart && newEnd) {
-            checkEndIsAfterStartExclusive(newEnd, newStart)
-        }
-        else if (!newStart && newEnd) {
-            checkEndIsAfterStartExclusive(start, newEnd)
-        }
-        else if (newStart && !newEnd) {
-            checkEndIsAfterStartExclusive(end, newStart)
-        }
-
-        // all data consistent, save in database
-
-        const data = { ...event, ...eventData } 
-
-        const updatedEvent = await eventsdb.updateEvent(eventId, data)
-
-        return updatedEvent
+    if (status === EventStatus.CANCELED || status === EventStatus.FINISHED) {
+        throw new AppError(`can not update event with status ${status}`, 422)
     }
-    catch(err) {
-        if (err instanceof AppError) {
-            throw err
-        }
 
-        if (err instanceof EventDBError && err.code === errorcodes.NOT_FOUND) {
-            throw new AppError(`no event found with id ${eventId}`, 404)
-        }
+    // ensure end > start
 
-        throw new AppError(err.message)
+    if (newStart && newEnd) {
+        checkEndIsAfterStartExclusive(newEnd, newStart)
     }
+    else if (!newStart && newEnd) {
+        checkEndIsAfterStartExclusive(start, newEnd)
+    }
+    else if (newStart && !newEnd) {
+        checkEndIsAfterStartExclusive(end, newStart)
+    }
+
+    // all data consistent, save in database
+
+    const data = { ...event, ...eventData } 
+
+    const updatedEvent = await eventsdb.updateEvent(eventId, data)
+
+    return { oldEvent: event, updatedEvent }
 }
 
 module.exports = {
-    addEvent,
-    
-    getAllEvents, getEventById, filterEvents,
-
-    setEvent
+    addEvent, getAllEvents, getEventById, filterEvents, setEvent
 }

@@ -1,4 +1,4 @@
-const { errorcodes, EventDB, EventDBError, EventStatus, GuestStatus } = require('../../database/eventsdb')
+const { EventDB, EventStatus, GuestStatus } = require('../../database/eventsdb')
 
 const loggers = require('../../utils/loggers')
 
@@ -75,23 +75,13 @@ const addGuest = async ( eventId, guestData ) => {
 
     checkEnterExistWithIsPresent(guestData)
 
-    try {
+    const event = await eventdb.getEventById(eventId)
 
-        const event = await eventdb.getEventById(eventId)
+    ensureConsistentGuestData(event, guestData)
 
-        ensureConsistentGuestData(event, guestData)
+    const newGuest = await eventdb.addGuestForEvent(eventId, guestData)
 
-        const newGuest = await eventdb.addGuestForEvent(eventId, guestData)
-
-        return newGuest
-    }
-    catch(err) {
-        if (err instanceof AppError) {
-            throw err
-        }
-        
-        throw new AppError(err.message)
-    }
+    return newGuest
 }
 
 const getAllGuestsForEvent = async ( eventId ) => {
@@ -106,76 +96,36 @@ const getAllGuestsForEvent = async ( eventId ) => {
 }
 
 const searchGuestForEvent = async ( eventId, { k }) => {
-    try {
-        const guests = eventdb.filterGuestsForEvent(eventId, k)
-        
-        return guests
-    }
-    catch(err) {
-        throw new AppError(err.message)
-    }
+    const guests = eventdb.filterGuestsForEvent(eventId, k)
+    return guests
 }
 
 const getGuestById = async ( guestId ) => {
-    try {
-        const event = eventdb.getGuestById(guestId)
-
-        return event
-    }
-    catch(err) {
-        if (err instanceof EventDBError && err.code === errorcodes.NOT_FOUND) {
-            throw new AppError(err.message, 404)
-        }
-
-        throw new AppError(err.message)
-    }
+    const event = eventdb.getGuestById(guestId)
+    return event
 }
 
 const setGuest = async ( guestId, guestData ) => {
 
     checkEnterExistWithIsPresent(guestData)
 
-    try {
-        const guest = await eventdb.getGuestById(guestId)
+    const guest = await eventdb.getGuestById(guestId)
 
-        const event = await getEventById(guest.eventId)
+    const event = await getEventById(guest.eventId)
 
-        ensureConsistentGuestData(event, guestData)
+    ensureConsistentGuestData(event, guestData)
 
-        const updatedGuest = await eventdb.updateGuest(guestId, guestData)
+    const updatedGuest = await eventdb.updateGuest(guestId, guestData)
 
-        return { oldGuest: guest, updatedGuest }
-    }
-    catch(err) {
-        if (err instanceof AppError) {
-            throw err
-        }
-
-        if (err instanceof EventDBError && err.code === errorcodes.NOT_FOUND) {
-            throw new AppError(err.message, 404)
-        }
-
-        throw new AppError(err.message)
-    }
+    return { oldGuest: guest, updatedGuest }
 }
 
 const removeGuest = async ( guestId ) => {
-
-    try {
-        await eventdb.removeGuest(guestId)
-    }
-    catch(err) {
-        if (err instanceof EventDBError && err.code === errorcodes.NOT_FOUND) {
-            throw new AppError(err.message, 404)
-        }
-
-        throw new AppError(err.message)
-    }
+    await eventdb.removeGuest(guestId)
 }
 
 
 module.exports = {
     ensureConsistentGuestData,
-
     addGuest, getAllGuestsForEvent, searchGuestForEvent, getGuestById,setGuest,removeGuest,
 }

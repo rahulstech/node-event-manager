@@ -1,7 +1,7 @@
 
 class AppError extends Error {
 
-    constructor(message = 'Internal Server Error', statusCode = 500, isOperational = true, stack = '') {
+    constructor(message = 'internal server error', statusCode = 500, isOperational = true, stack = '') {
         super()
         this.name = this.constructor.name
         this.message = message
@@ -18,13 +18,18 @@ class AppError extends Error {
 
 const catchRequestHandlerAsync = ( fn ) => (req, res, next) => {
 
-    fn(req, res, next).catch(err => next(err))
+    fn(req, res, next).catch(err =>{ 
+        if (err instanceof AppError) {
+            next(err)
+        }
+        else {
+            next(new AppError(err.message, 500, false, err.stack))
+        }
+     })
 }
 
 module.exports = {
-
     AppError,
-
     catchRequestHandlerAsync,
 }
 

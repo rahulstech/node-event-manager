@@ -32,7 +32,8 @@ For data storage json files are used. Each event data with guest list is stoted 
 |8. **PUT**|`/api/v1/guests/:guestId`|`multipart/form-data`|`application/json`| updated the guest by `guestId` and returns the updated guest |
 |9. **DELETE**|`/api/v1/guests/:guestId`||`application/json`| deletes the guest by `guestId` |
 |10. **GET**|`/api/v1/events/:eventId/guests/search?k=***`||`application/json`| searchs guests that contain the key word in first name and/or last and returns a list of matched guests for the event with id `eventId` |
-|11. **GET**|`/guest_images/:guestImage`||binary| returns guest image |
+|11. **GET** | `/api/v1/guests/:guestId` || `application/json` | get guest by id |
+|12. **GET**|`/guest_images/:guestImage`||binary| returns guest image |
 
 ### Sample Response
 
@@ -358,5 +359,36 @@ For data storage json files are used. Each event data with guest list is stoted 
     {
         "code": 404,
         "message": "no event found with id <eventId>"
+    }
+    ```
+11. `/api/v1/guests/:guestId`
+
+    on successful
+
+    ```json
+    {
+        "code": 200,
+        "message": "successful",
+        "data": {
+            "id": 1,
+            "eventId": 1,
+            "firstname": "person1 fn",
+            "lastname": "person1 ln",
+            "age": 34,
+            "sex": "MALE",
+            "guest_image": "rs25fhabes85fegabse54fbca47egsb",
+            "is_present": "ABSENT",
+            "enter": null,
+            "exit": null
+        }
+    }
+    ```
+
+    on not found
+
+    ```json
+    {
+        "code": 404,
+        "message": "no guest found with id <guestId>"
     }
     ```

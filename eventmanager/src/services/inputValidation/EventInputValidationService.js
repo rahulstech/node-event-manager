@@ -152,9 +152,11 @@ const mwFilterEventsValidator = async (req, res, next) => {
 
     const { query } = req
 
-    const validQuery = await validate(schemaFilterEvents,  query)
+    const value = await validate(schemaFilterEvents,  query)
 
-    pushValidQuery(req, { validQuery })
+    const { k, status, organizer, venu } = value
+
+    pushValidQuery(req, { k, status, organizer, venu })
 
     next()
 }
