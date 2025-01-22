@@ -46,6 +46,11 @@ async function addPost_ThirdMethod(user, post) {
     await user.addPost(postModel)
 }
 
+
+async function addTag(post, tag) {
+    
+}
+
 (async () => {
     try {
         await sequelize.authenticate();
@@ -77,7 +82,7 @@ async function addPost_ThirdMethod(user, post) {
         })
 
         // printing all posts 
-        
+
         printAllPosts(user)
         
     } catch (error) {

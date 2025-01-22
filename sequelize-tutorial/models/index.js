@@ -11,6 +11,8 @@ const User = require('./User')(sequelize);
 
 const Post = require('./Post')(sequelize);
 
+const Tag = require('./Tag')(sequelize);
+
 User.hasMany(Post, { 
     onDelete: 'CASCADE',
     foreignKey: {
@@ -19,7 +21,10 @@ User.hasMany(Post, {
  })
 Post.belongsTo(User)
 
+Post.belongsToMany(Tag, { through: 'PostTag' })
+Tag.belongsToMany(Post, { through: 'PostTag' })
+
 module.exports = {
     sequelize, 
-    User, Post, 
+    User, Post, Tag
 }

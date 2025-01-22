@@ -13,3 +13,6 @@ winston-tutorial/logs/
 package-lock.json
 
 sequelize-tutorial/database/
+
+sequelze-queries/database/
+sequelize-queries/output.txt
