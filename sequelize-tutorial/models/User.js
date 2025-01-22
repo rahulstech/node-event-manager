@@ -10,6 +10,7 @@ module.exports = ( sequelize ) => {
         },
         username: {
             type: DataTypes.STRING,
+            allowNull: false,
             unique: true
         },
         email: {
@@ -18,6 +19,7 @@ module.exports = ( sequelize ) => {
         }
     }, {
          modelName: 'User',
+         tableName: 'tbl_users',
          timestamps: false,
     })
 
