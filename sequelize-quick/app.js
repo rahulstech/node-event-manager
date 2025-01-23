@@ -22,10 +22,36 @@ const TestValidate = sequelize.define('TestValidate', {
      */
 
     datetimeStart: {
-        type: DataTypes.STRING(16)
+        type: DataTypes.STRING(16),
+
+        get() {
+            const rawValue = this.getDataValue('datetimeStart')
+            if (!rawValue) {
+                return undefined
+            }
+            return moment(rawValue, 'YYYY-MM-DD HH:mm', true).toDate()
+        },
+
+        set(value) {
+            const formatted = moment(value.toUTCString()).format('YYYY-MM-DD HH:mm')
+            this.setDataValue('datetimeStart', formatted)
+        },
     },
     datetimeEnd: {
-        type: DataTypes.STRING(16)
+        type: DataTypes.STRING(16),
+
+        get() {
+            const rawValue = this.getDataValue('datetimeEnd')
+            if (!rawValue) {
+                return undefined
+            }
+            return moment(rawValue, 'YYYY-MM-DD HH:mm', true).toDate()
+        },
+
+        set(value) {
+            const formatted = moment(value.toUTCString()).format('YYYY-MM-DD HH:mm')
+            this.setDataValue('datetimeEnd', formatted)
+        }
     },
 }, {
     tableName: 'tbl_test_validate',
@@ -34,15 +60,21 @@ const TestValidate = sequelize.define('TestValidate', {
         // added this model validator. it is useful when validating based on more than one attributes on the model
         // like in the following case i am checking datetimeEnd is after datetimeStart
         checkEndIsAfterStart() {
-            const start = moment(this.datetimeStart, 'YYYY-MM-DD HH:mm', true)
-            const end = moment(this.datetimeEnd, 'YYYY-MM-DD HH:mm', true)
+            // const start = moment(this.datetimeStart, 'YYYY-MM-DD HH:mm', true)
+            // const end = moment(this.datetimeEnd, 'YYYY-MM-DD HH:mm', true)
 
-            if (!start.isValid()) {
-                throw new Error(`datetimeStart ${this.datetimeStart} is invalid`)
-            }
-            if (!end.isValid()) {
-                throw new Error(`datetimeEnd ${this.datetimeEnd} is invalid`)
-            }
+            // if (!start.isValid()) {
+            //     throw new Error(`datetimeStart ${this.datetimeStart} is invalid`)
+            // }
+            // if (!end.isValid()) {
+            //     throw new Error(`datetimeEnd ${this.datetimeEnd} is invalid`)
+            // }
+
+            // datetimeStart and datetimeEnd are now Date instances. So, pasing is not required
+
+            const start = moment(this.datetimeStart)
+            const end = moment(this.datetimeEnd)
+
             if (!end.isAfter(start)) {
                 throw new Error(`end ${this.datetimeEnd} must be after start ${this.datetimeStart}`)
             }
@@ -58,61 +90,80 @@ const TestValidate = sequelize.define('TestValidate', {
         await sequelize.sync({ force: true })
         console.log('Database synced successfully')
 
-        await testInvalidInput()
+        // await runTests()
 
-        await testInvalidFormat1()
-
-        await testInvalidFormat2()
-
-        await testValidInput()
+        await set_and_get()
     }
     catch(err) {
         console.log(err)
     }
 })();
 
-async function testInvalidInput() {
-    const data = { datetimeStart: '2023-05-16 07:50', datetimeEnd: '2023-05-16 06:00' }
-    try {
-        const newRow = await TestValidate.create(data)
-        console.log('data: ', data,' new row: ', newRow.toJSON())
-    }
-    catch(err) {
-        console.log('can not create ', data, ' because ', JSON.stringify(err))
-    }
+async function set_and_get() {
+
+    const newValue = await TestValidate.create({ datetimeStart: new Date(2023, 5, 16, 5, 30), datetimeEnd: new Date(2023, 5, 16, 6, 0)})
+    
+    const found = await TestValidate.findOne({
+        where: {
+            id: newValue.id
+        }
+    })
+
+    console.log('found one by id ', newValue.id, ' is ', found.toJSON())
 }
 
-async function testInvalidFormat1() {
-    const data = { datetimeStart: '07:50', datetimeEnd: '2023-05-16 15:60' }
-    try {
-        const newRow = await TestValidate.create(data)
-        console.log('data: ', data,' new row: ', newRow.toJSON())
+async function runTests() {
+    async function testInvalidInput() {
+        const data = { datetimeStart: new Date(2023,4,16, 7, 50), datetimeEnd: new Date(2023,4,16, 6,0) }
+        try {
+            const newRow = await TestValidate.create(data)
+            console.log('data: ', data,' new row: ', newRow.toJSON())
+        }
+        catch(err) {
+            console.log('can not create ', data, ' because ', err)
+        }
     }
-    catch(err) {
-        console.log('can not create ', data, ' because ', JSON.stringify(err))
+    
+    // async function testInvalidFormat1() {
+    //     const data = { datetimeStart: '07:50', datetimeEnd: '2023-05-16 15:60' }
+    //     try {
+    //         const newRow = await TestValidate.create(data)
+    //         console.log('data: ', data,' new row: ', newRow.toJSON())
+    //     }
+    //     catch(err) {
+    //         console.log('can not create ', data, ' because ', JSON.stringify(err))
+    //     }
+    // }
+    
+    // async function testInvalidFormat2() {
+    //     const data = { datetimeStart: '2023-05-16 07:50', datetimeEnd: '2023-05-16' }
+    //     try {
+    //         const newRow = await TestValidate.create(data)
+    //         console.log('data: ', data,' new row: ', newRow.toJSON())
+    //     }
+    //     catch(err) {
+    //         console.log('can not create ', data, ' because ', JSON.stringify(err))
+    //     }
+    // }
+    
+    async function testValidInput() {
+        const data = { datetimeStart: new Date(2023,4,16, 7, 50), datetimeEnd: new Date(2023,4,16, 8,0) }
+        try {
+            const newRow = await TestValidate.create(data)
+            console.log('data: ', data,' new row: ', newRow.toJSON())
+        }
+        catch(err) {
+            console.log('can not create ', data, ' because ', err)
+        }
     }
-}
+    
+    
+    await testInvalidInput()
 
-async function testInvalidFormat2() {
-    const data = { datetimeStart: '2023-05-16 07:50', datetimeEnd: '2023-05-16' }
-    try {
-        const newRow = await TestValidate.create(data)
-        console.log('data: ', data,' new row: ', newRow.toJSON())
-    }
-    catch(err) {
-        console.log('can not create ', data, ' because ', JSON.stringify(err))
-    }
-}
+    // await testInvalidFormat1()
 
-async function testValidInput() {
-    const data = { datetimeStart: '2023-05-16 07:50', datetimeEnd: '2023-05-16 08:00' }
-    try {
-        const newRow = await TestValidate.create(data)
-        console.log('data: ', data,' new row: ', newRow.toJSON())
-    }
-    catch(err) {
-        console.log('can not create ', data, ' because ', JSON.stringify(err))
-    }
-}
+    // await testInvalidFormat2()
 
+    await testValidInput()
+}
 
