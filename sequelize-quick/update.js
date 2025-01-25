@@ -80,7 +80,7 @@ async function addContacts() {
     for(const contact of contacts) {
         try {
             const model = await Contact.create(contact)
-            console.log('data: ', contact, ' model: ', model.toJSON())
+            // console.log('data: ', contact, ' model: ', model.toJSON())
         }
         catch(err) {
             console.log(err)
@@ -91,12 +91,14 @@ async function addContacts() {
 async function runTest() {
 
     const tests = [
-        update_addLastname, update_addEmail, update_changeFirstname, update_setPhone_null, update_onlyFields
+        update_addLastname, update_addEmail, update_changeFirstname, update_setPhone_null, update_onlyFields, 
+        update_undefinedValue
     ]
 
     for( const test of tests) {
         try {
             await test()
+            console.log("====================================================")
         }
         catch(err) {
             console.log(err)
@@ -118,13 +120,31 @@ async function update_addLastname() {
 
 async function update_addEmail() {
     const id = 4
-    const contact = await Contact.findOne({ where: { id }})
 
-    console.log(`update: id=${id} contact=`, contact.toJSON())
+    // contact is a Contact model object not plain js object.
+    const contact = await Contact.findOne({ 
 
+        // if i uncomment the following property then result will be plain js object.
+        // raw is by default false means a Model instance will be retured
+
+        // raw: true,
+
+        where: { id }
+    })
+
+    // to reuse the older state i stored the value. because after update i can not access the older values from the instance
+    const oldContact = { ...contact.toJSON() }
+
+    console.log(`update: id=${id} contact=`, oldContact )
+
+    // to call the update() instance method i need a Model instance, so if i use raw = true then i can not do the following.
+    // I have to then use the static update() method of Contact 
     const result = await contact.update({ email:  'daniel.brown@example.com' })
 
-    console.log(` result=`, result.toJSON())
+
+    // result is the same model instance and model toJSON() method will return plain js object containing attributes values only
+    // use the result or the contact instance is same
+    console.log(` old: `, oldContact, ` updated: `, result.toJSON())
 }
 
 async function update_changeFirstname() {
@@ -174,4 +194,21 @@ async function update_onlyFields() {
     else {
         console.log('contact not updated')
     }
+}
+
+async function update_undefinedValue() {
+    /**
+     * when a value is undefined then it is not updated. like here the contact with id 3 already has an email and updating email
+     * to undefined. but this updated will not execute. 
+     */
+    const id = 3
+    const values = { email:  undefined }
+
+    const contact = await Contact.findOne({ where : { id }})
+
+    const oldContact = { ...contact.toJSON() }
+
+    await contact.update(values)
+
+    console.log('update: id=', id, ' values=', values, ' oldContact: ', oldContact, '  updated contact=', contact.toJSON())
 }

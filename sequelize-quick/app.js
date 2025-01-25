@@ -90,9 +90,9 @@ const TestValidate = sequelize.define('TestValidate', {
         await sequelize.sync({ force: true })
         console.log('Database synced successfully')
 
-        // await runTests()
+        await runTests()
 
-        await set_and_get()
+        // await set_and_get()
     }
     catch(err) {
         console.log(err)
