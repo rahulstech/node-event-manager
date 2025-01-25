@@ -1,40 +1,38 @@
-const { EventDB, EventStatus, GuestStatus } = require('../../database/eventsdb')
-
+const { Op } = require('sequelize')
+const { Guest, Event, EventStatus, GuestStatus } = require('../../database/eventsdb')
 const loggers = require('../../utils/loggers')
-
-const { isDateTimeAfter, isDateTimeBetween } = require('../../utils/helpers')
-
+const { isDateTimeBetween, renameKeys, formatDateTime, parseDateTime } = require('../../utils/helpers')
 const { AppError } = require('../../utils/errors')
-
-const { getEventById } = require('./EventDataService')
 
 
 const logger = loggers.logger.child({ module: 'GuestDataService' })
 
-const eventdb = EventDB.create()
+function ensureEventStatus( { status } ) {
 
-const ensureConsistentGuestData = ( event, guestData ) => {
+    // if event is canceled or finished, update not allowed
+    if (status === EventStatus.CANCELED || status === EventStatus.FINISHED) {
+        throw new AppError(`event status ${status}; can not modify guest list`, 422)
+    }
+}
 
-    const { start, end, status } = event
+function ensureConsistentGuestData( event, guestData ) {
+
+    const { eventStart, eventEnd } = event
 
     const { enter, exit } =  guestData
 
-    // if event is canceled or finished, update not allowed
-
-    if (status === EventStatus.CANCELED || status === EventStatus.FINISHED) {
-        logger.warn(`can not update guest for event with status ${EventStatus.CANCELED} or ${EventStatus.FINISHED}`)
-        logger.debug(`event status ${status}`)
-
-        throw new AppError(`event status ${status}; can not modify guest`, 422)
-    }
+    ensureEventStatus(event)
 
     // check enter and exit is between event start and end
 
-    let messages = []
+    const start = parseDateTime(eventStart)
+    const end = parseDateTime(eventEnd)
+
+    const messages = []
     let inconsistent = false
 
     if (enter && !isDateTimeBetween(enter, start, end, true)) {
-        const message = '"enter" must be between event start and end'
+        const message = '"enter" must be between event "start" and "end"'
 
         messages.push(message)
 
@@ -42,7 +40,7 @@ const ensureConsistentGuestData = ( event, guestData ) => {
     }
 
     if (exit && !isDateTimeBetween(exit, start, end, true)) {
-        const message = '"exit" must be between event start and end'
+        const message = '"exit" must be between event "start" and "end"'
 
         messages.push(message)
 
@@ -50,80 +48,174 @@ const ensureConsistentGuestData = ( event, guestData ) => {
     }
 
     if (inconsistent) {
-        logger.warn('inconsistent guest update data found', { debugExtras: messages })
+        const message = messages.join('\n')
 
-        throw new AppError(JSON.stringify(messages), 422)
+        throw new AppError(message, 422)
     }
 }
 
-function checkEnterExistWithIsPresent( value ) {
-    const { enter, exit, is_present } = value
-
-    if (is_present && is_present === GuestStatus.PRESENT) {
-        if (enter && exit) {
-            if (!isDateTimeAfter(exit, enter, true)) {
-                throw new AppError('exit must be after enter', 422)
+function toServiceValues(guestData) {
+    return renameKeys([
+        ['guest_image', 'guestImage'],
+        ['enter', 'guestEnter'], ['exit', 'guestExit'], ['is_present', 'isPresent']
+    ],
+    guestData, 
+    {
+        valueConverter: ( key, value ) => {
+            if (key === 'guestEnter' || key === 'guestExit') {
+                if (!value) {
+                    return null
+                }
+                return formatDateTime(value)
             }
+            return value
         }
-        else {
-            throw new AppError('enter and exit is required when "is_present" is PRESENT', 422)
+    })
+}
+
+function toResponseGuest(guestModel) {
+    return renameKeys([
+        ['guestImage', 'guest_image'],
+        ['guestEnter', 'enter',], ['guestExit', 'exit'], ['isPresent', 'is_present']
+    ],
+    guestModel,
+    {
+        defaultValueProvider: (key) => {
+            if (key === 'enter' || key === 'exit') {
+                return null
+            }
+            return undefined
+        }
+    })
+}
+
+function removeEnterExitIfNotPresent(values) {
+    if (!values.isPresent || values.isPresent !== GuestStatus.PRESENT) {
+        if (values.guestEnter) {
+            values.guestEnter = null
+        }
+        if (values.guestExit) {
+            values.guestExit = null
         }
     }
 }
+
+async function findEventByIdOrThrow( eventId ) {
+    const event = await Event.findOne({ where: { id: eventId }})
+
+    if ( null === event ) {
+        throw new AppError(`no event found with id ${eventId}`, 404)
+    }
+
+    return event
+}
+
+///////////////////////////////////////
+///     Guest Service Methods      ///
+/////////////////////////////////////
 
 const addGuest = async ( eventId, guestData ) => {
 
-    checkEnterExistWithIsPresent(guestData)
-
-    const event = await eventdb.getEventById(eventId)
+    const event = await findEventByIdOrThrow(eventId)
 
     ensureConsistentGuestData(event, guestData)
 
-    const newGuest = await eventdb.addGuestForEvent(eventId, guestData)
+    const values = toServiceValues(guestData)
 
-    return newGuest
+    removeEnterExitIfNotPresent(values)
+
+    const newGuest = await event.createGuest(values)
+
+    return toResponseGuest(newGuest.toJSON())
 }
 
 const getAllGuestsForEvent = async ( eventId ) => {
-    try {
-        const guests = eventdb.getAllGuestsForEvent(eventId)
+    
+    const event = await findEventByIdOrThrow(eventId)
 
-        return guests
-    }
-    catch(err) {
-        throw new AppError(err.message)
-    }
+    const rawGuests = await event.getGuests({ 
+        raw: true,
+    })
+
+    const guests = rawGuests.map( guest => toResponseGuest(guest))
+
+    return guests
 }
 
 const searchGuestForEvent = async ( eventId, { k }) => {
-    const guests = eventdb.filterGuestsForEvent(eventId, k)
+
+    const event = await findEventByIdOrThrow(eventId)
+    
+    const rawGuests = await event.getGuests({
+        raw: true,
+        where: {
+            [Op.or]: [
+                { firstname: { [Op.like]: `%${k}%` }},
+                { lastname: { [Op.like]: `%${k}%` }}
+            ],
+        }
+    })
+
+    const guests = rawGuests.map( guest => toResponseGuest(guest))
+
     return guests
 }
 
 const getGuestById = async ( guestId ) => {
-    const event = eventdb.getGuestById(guestId)
-    return event
+    const guestModel = await Guest.findOne({ where: { id: guestId }})
+
+    if ( null === guestModel) {
+        throw new AppError(`no guest found with id ${guestId}`, 404)
+    }
+
+    return toResponseGuest(guestModel.toJSON())
 }
 
 const setGuest = async ( guestId, guestData ) => {
 
-    checkEnterExistWithIsPresent(guestData)
+    const guest = await Guest.findOne({
+        where: { id: guestId }
+    })
 
-    const guest = await eventdb.getGuestById(guestId)
+    if (null === guest) {
+        throw new AppError(`no guest found with id ${guestId}`, 404)
+    }
 
-    const event = await getEventById(guest.eventId)
+    const event = await guest.getEvent({ 
+        attributes: ['status', 'eventStart', 'eventEnd']
+    })
 
     ensureConsistentGuestData(event, guestData)
 
-    const updatedGuest = await eventdb.updateGuest(guestId, guestData)
+    const oldGuest = { ...guest.toJSON() }
 
-    return { oldGuest: guest, updatedGuest }
+    const values = toServiceValues(guestData)
+
+    removeEnterExitIfNotPresent(values)
+
+    await guest.update(values)
+
+    return { oldGuest: toResponseGuest(oldGuest), updatedGuest: toResponseGuest(guest.toJSON()) }
 }
 
 const removeGuest = async ( guestId ) => {
-    await eventdb.removeGuest(guestId)
-}
 
+    const guest = await Guest.findOne({ 
+        where: { id: guestId }
+    })
+
+    if (guest === null) {
+        throw new AppError(`no guest found with id ${guestId}`, 404)
+    }
+
+    const event = await guest.getEvent()
+
+    ensureEventStatus(event)
+
+    await guest.destroy()
+
+    return toResponseGuest(guest.toJSON())
+}
 
 module.exports = {
     ensureConsistentGuestData,

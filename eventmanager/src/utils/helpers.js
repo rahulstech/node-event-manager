@@ -27,7 +27,7 @@ const parseDateTime = (datetimeText) => {
 }
 
 const formatDateTime = (dateObj) => {
-    if (!dateObj) {
+    if (!dateObj || dateObj.constructor.name != 'Date') {
         throw new DateTimeError('no Date object provided')
     }
 
@@ -88,8 +88,89 @@ const isDateTimeAfter = (testDt, startDt, inclusive = false ) => {
     }
 }
 
+const enumValues = ( enumClass ) => {
+    return Object.values(enumClass)
+            .filter( value => typeof value === 'string' )
+}
+
+const copyNameValuePairs = (keys, source, target = {}, options = null) => {
+    
+    if (target === null || target === undefined) {
+        target = {}
+    }
+
+    if (source === undefined || source === null) {
+        return target
+    }
+
+    const { defaultValueProvider, valueConverter } = options || {}
+
+    keys.forEach( key => {
+        const type = key.constructor.name
+
+        let tKey, tVal
+
+        if (type === 'String') {
+            tKey = key
+            tVal = source[key]
+        }
+        else if (type === 'Array') {
+            const [ srcKey, destKey ] = key
+            tKey = destKey
+            tVal = source[srcKey]
+        }
+
+        if ( tVal === undefined ) {
+            if (defaultValueProvider) {
+                target[tKey] = defaultValueProvider(tKey)
+            }
+        }
+        else if (valueConverter) {
+            target[tKey] = valueConverter(key, tVal)
+        }
+        else {
+            target[tKey] = tVal
+        }
+    })
+
+    return target
+}
+
+const renameKeys = (keys, source, options = null) => {
+    
+    if (!source) {
+        return {}
+    }
+
+    const { defaultValueProvider, valueConverter } = options || {}
+
+    const destination = { ...source }
+
+    keys.forEach( ([srcKey, destKey]) => {
+        
+        const value = source[srcKey]
+
+        delete destination[srcKey]
+
+        if (value === undefined) {
+            if (defaultValueProvider) {
+                destination[destKey] = defaultValueProvider(destKey)
+            }
+        }
+        else if (valueConverter) {
+            destination[destKey] = valueConverter(destKey, value)
+        }
+        else {
+            destination[destKey] = value
+        }
+    })
+
+    return destination
+}
+
 module.exports = {
     DateTimeError,
     parseDateTime, formatDateTime, isDateTimeBetween, isDateTimeBefore, isDateTimeAfter,
-    pushValidBody, pushValidParams, pushValidQuery
+    pushValidBody, pushValidParams, pushValidQuery, 
+    enumValues, copyNameValuePairs, renameKeys
 }

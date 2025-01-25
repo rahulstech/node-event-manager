@@ -1,11 +1,10 @@
 const loggers = require('../../utils/loggers')
-
 const eventDataService = require('../../services/dataService/EventDataService')
 
 
 const logger = loggers.logger.child({ module: 'EventApiController' })
 
-const createEvent = async (req, res, next) => {
+const createEvent = async (req, res) => {
 
     const { eventData } = req.validBody 
 

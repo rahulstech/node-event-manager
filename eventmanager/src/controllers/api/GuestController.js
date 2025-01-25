@@ -15,7 +15,6 @@ const { existsSync } = require('node:fs')
 
 const logger = loggers.logger.child({ module: 'GuestApiController'})
 
-
 // Create Guest 
 
 const addGuestForEvent = async (req, res) => {

@@ -8,6 +8,8 @@ const { guestRoutes } = require('./routes/GuestRoutes.js')
 
 const errors = require('./utils/errors.js')
 
+const { connectDatabase }= require('./database/eventsdb')
+
 const logger = loggers.logger.child({ 
     module: 'EventManager',
 })
@@ -22,7 +24,7 @@ server.use((req, res, next) => {
     next()
 })
 
-// api routes
+// routes
 
 server.use('/', guestRoutes.guestImages)
 
@@ -30,5 +32,8 @@ server.use('/', apiRoutes)
 
 
 
+connectDatabase().then(() => {
 
-server.listen(process.env.SERVER_PORT, () => logger.info(`server is listening on port ${process.env.SERVER_PORT}`))
+    server.listen(process.env.SERVER_PORT, () => logger.info(`server is listening on port ${process.env.SERVER_PORT}`))
+})
+

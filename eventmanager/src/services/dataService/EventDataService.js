@@ -1,88 +1,106 @@
-const  { errorcodes, EventDB, EventDBError, EventStatus } = require('../../database/eventsdb')
-
+const  { EventStatus, Event } = require('../../database/eventsdb')
+const { Op } = require('sequelize')
 const loggers = require('../../utils/loggers')
-
 const { AppError } = require('../../utils/errors')
+const { renameKeys, formatDateTime } = require('../../utils/helpers')
 
-const { isDateTimeAfter } = require('../../utils/helpers')
 
 const logger = loggers.logger.child({ module: 'EventDataServie' })
 
-const eventsdb = EventDB.create()
+function toServiceValues( data ) {
+    return renameKeys([
+        ['start', 'eventStart'], ['end', 'eventEnd']
+    ], data, {
+        valueConverter: ( key, value ) => {
+            if (key === 'eventStart' || key === 'eventEnd') {
+                return formatDateTime(value)
+            }
+            return value
+        }
+    })
+}
 
-function checkEndIsAfterStartExclusive(start, end) {
-    if (!isDateTimeAfter(end, start)) {
-        throw new AppError('"end" must be after "start"', 400)
-    }
+function toResponseEvent( data ) {
+    return renameKeys([
+        ['eventStart','start'], ['eventEnd', 'end']
+    ], data)
 }
 
 const addEvent = async ( eventData ) => {
 
-    const { start, end } = eventData
+    const values = toServiceValues(eventData)
 
-    checkEndIsAfterStartExclusive(start, end)
+    const newEvent = await Event.create(values)
 
-    const newEvent = await eventsdb.createEvent(eventData)
-
-    return newEvent
+    return toResponseEvent(newEvent.toJSON())
 }
 
 const getAllEvents = async () => {
-    const events = await eventsdb.getAllEvents()
-    return events
+    const rawEvents = await Event.findAll({
+        raw: true,
+    })
 
+    const events = rawEvents.map( event => toResponseEvent(event))
+
+    return events
 }
 
 const getEventById = async ( eventId ) => {
-    const event = await eventsdb.getEventById(eventId)
-    return event
+
+    const rawEvent = await Event.findOne({ 
+        raw: true,
+        where: { id: eventId }})
+
+    if (null === rawEvent) {
+        throw new AppError(`no event found with id ${eventId}`, 404)
+    }
+
+    return toResponseEvent(rawEvent)
 }
 
 const filterEvents = async ({ k, status, venu, organizer }) => {
-    const events = await eventsdb.filterEvents(k, status, venu, organizer)
+    
+    // TODO: complete filter events
+    
+    const eventModels = await Event.findAll({
+        raw: true,
+        where: {
+            title: { [Op.like]: '%k%' }
+        }
+    })
+
+    const events = eventModels.map( eventModel => toResponseEvent(eventModel.toJSON()))
+
     return events
 }
 
 const setEvent = async ( eventId, eventData ) => {
 
-    /**
-     * 1. get event by id
-     * 2. if found then check event start, end and status for consistency
-     * 3. if not found throw 404 not found error
-     * 4. save the udpated event
-     */
+    const event = await Event.findOne({ 
+        where: { id: eventId }
+    })
 
-    const { start: newStart, end: newEnd } = eventData
+    // if event does not exists throw error 404 not found 
 
-    const event = await eventsdb.getEventById(eventId)
+    if (null === event) {
+        throw new AppError(`no event found with id ${eventId}`, 404)
+    }
 
-    const { status, start, end } = event
+    // if event status is CANCELED or FINISED, can not update
 
-    // if event status is CANCELED or FINISED can not update
+    const { status } = event
 
     if (status === EventStatus.CANCELED || status === EventStatus.FINISHED) {
         throw new AppError(`can not update event with status ${status}`, 422)
     }
 
-    // ensure end > start
+    // keep a copy of old event to send it later
 
-    if (newStart && newEnd) {
-        checkEndIsAfterStartExclusive(newEnd, newStart)
-    }
-    else if (!newStart && newEnd) {
-        checkEndIsAfterStartExclusive(start, newEnd)
-    }
-    else if (newStart && !newEnd) {
-        checkEndIsAfterStartExclusive(end, newStart)
-    }
+    const values = toServiceValues(eventData)
 
-    // all data consistent, save in database
+    await event.update(values)
 
-    const data = { ...event, ...eventData } 
-
-    const updatedEvent = await eventsdb.updateEvent(eventId, data)
-
-    return { oldEvent: event, updatedEvent }
+    return toResponseEvent(event.toJSON())
 }
 
 module.exports = {

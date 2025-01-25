@@ -1,0 +1,16 @@
+{
+    "test": {
+        "storage": ":memory:",
+        "dialect": "sqlite"
+    },
+
+    "development": {
+        "dbFile": "dev-events.db3",
+        "dialect": "sqlite"
+    },
+
+    "production": {
+        "dbFile": "prod-events.db",
+        "dialect": "sqlite"
+    }
+}
