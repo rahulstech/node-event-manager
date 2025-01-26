@@ -6,10 +6,10 @@ const loggers = require('../../utils/loggers')
 
 const { EventStatus } = require('../../database/eventsdb')
 
-const { InputValidationError, getJoiCustomDateTimeRule, validate } = require('./inputvalidator')
+const { getJoiCustomDateTimeRule, validate } = require('./inputvalidator')
 
 
-const { catchRequestHandlerAsync, AppError } = require('../../utils/errors')
+const { AppError } = require('../../utils/errors')
 
 const logger = loggers.logger.child({ module: 'EventInputValidationService'})
 
@@ -21,9 +21,9 @@ const field_venu = joi.string()
 
 const field_description = joi.string()
 
-const field_start = joi.string().custom(getJoiCustomDateTimeRule())
+const field_start = joi.custom(getJoiCustomDateTimeRule())
 
-const field_end = joi.string().custom(getJoiCustomDateTimeRule())
+const field_end = joi.custom(getJoiCustomDateTimeRule())
 
 const field_status = joi.string().valid(...EventStatus.values())
 

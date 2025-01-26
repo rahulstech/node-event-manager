@@ -1,5 +1,5 @@
 const { DataTypes } = require('sequelize')
-const { enumValues, isDateTimeAfter, parseDateTime, formatDateTime } = require('../utils/helpers')
+const { enumValues, isDateTimeAfter } = require('../../utils/helpers')
 
 const Sex = {
 
@@ -75,12 +75,12 @@ const initGuest =( sequelize ) => {
 
         guestEnter: {
             field: 'guest_enter',
-            type: DataTypes.STRING(16),
+            type: DataTypes.DATE,
         },
 
         guestExit: {
             field: 'guest_exit',
-            type: DataTypes.STRING(16),
+            type: DataTypes.DATE,
         },
 
     }, {
@@ -90,15 +90,8 @@ const initGuest =( sequelize ) => {
             checkExitIsAfterEnter() {
                 const enter = this.guestEnter
                 const exit = this.guestExit
-                if (enter && exit) {
-                    const enterDate = parseDateTime(enter)
-
-                    const exitDate = parseDateTime(exit)
-
-                    if (!isDateTimeAfter(exitDate, enterDate, true)) {
-
-                        throw new Error('guest exit must be same or after enter')
-                    }
+                if (enter && exit && !isDateTimeAfter(exit, enter, true)) {
+                    throw new Error('guest exit must be same or after enter')
                 }
             },
 

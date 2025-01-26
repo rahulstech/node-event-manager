@@ -24,9 +24,9 @@ const field_sex = joi.string().valid(...Sex.values())
 
 const field_age = joi.number().min(0) // TODO: should change min age ?
 
-const field_enter = joi.string().custom(getJoiCustomDateTimeRule())
+const field_enter = joi.custom(getJoiCustomDateTimeRule())
 
-const field_exit = joi.string().custom(getJoiCustomDateTimeRule())
+const field_exit = joi.custom(getJoiCustomDateTimeRule())
                         
 const field_is_present = joi.string().valid(...GuestStatus.values())
 

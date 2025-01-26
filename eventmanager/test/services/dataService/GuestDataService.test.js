@@ -4,29 +4,28 @@ const { ensureConsistentGuestData,
         searchGuestForEvent, setGuest, removeGuest } = require("../../../src/services/dataService/GuestDataService")
 const { AppError } = require('../../../src/utils/errors')
 
-
 const event1 = {
     id: 1,
     title: "my first event", organizer: "me", venu: "Berhampore", description: "this is organized by me",
-    eventStart: "2023-05-15 14:30" , eventEnd: "2023-05-15 16:00", status: "CANCELED"
+    eventStart: new Date(2023, 4, 15, 14, 30), eventEnd: new Date(2023, 4, 15, 16, 0), status: "CANCELED"
 }
 
 const event2 = {
     id: 2,
     title: "annual general event", organizer: "organizer A", venu: "Kandi", description: "this is annual event of organizer A",
-    eventStart: "2023-04-17 07:30", eventEnd: "2023-04-17 09:30", status: "PENDING"
+    eventStart: new Date(2023, 3, 17, 7, 30), eventEnd: new Date(2023, 3, 17, 9, 30), status: "PENDING"
 }
 
 const event3 = {
     id: 3,
     title: "quaterly general event", organizer: "organizer B", venu: "Salar", description: "this is quaterly event of organizer B",
-    eventStart: "2023-04-30 12:00", eventEnd: "2023-04-30 15:00", status: "RUNNING"
+    eventStart: new Date(2023, 3, 30, 12, 0), eventEnd: new Date(2023, 3, 30, 15, 0), status: "RUNNING"
 }
 
 const event4 = {
     id: 4,
     title: "my second event", organizer: "me", venu: "Berhampore", description: "this is my second organized event",
-    eventStart: "2023-08-15 14:00", eventEnd: "2023-08-15 16:00", status: "FINISHED"
+    eventStart: new Date(2023, 7, 15, 14, 0), eventEnd: new Date(2023, 7, 15, 16, 0), status: "FINISHED"
 }
 
 const guest1 = {
@@ -50,7 +49,7 @@ const guest3 = {
 const guest4 = {
     id: 4, eventId: 4,
     firstname: "guest4", lastname: "guest4", age: 34, sex: "FEMALE", guestImage: "guest4.jpg",
-    guestEnter: "2023-08-15 13:45", guestExit: "2023-08-15 16:15", isPresent: 'PRESENT'
+    guestEnter: new Date(2023, 7, 15, 13, 45), guestExit: new Date(2023, 7, 15, 16, 15), isPresent: 'PRESENT'
 }
 
 const events = [ event1, event2, event3, event4]
@@ -70,14 +69,13 @@ beforeEach(async () => {
     }
 })
 
-
 describe('ensureConsistentGuestData', () => {
 
     test('valid data', () => {
         const event = {
-            eventStart: "2024-06-04 07:15",
+            eventStart: new Date(2024, 5, 4, 7, 15),
     
-            eventEnd: "2024-06-04 08:45",
+            eventEnd: new Date(2024, 5, 4, 8, 45),
     
             status: EventStatus.PENDING
         }
@@ -93,9 +91,9 @@ describe('ensureConsistentGuestData', () => {
 
     test('no enter and exit', () => {
         const event = {
-            eventStart: "2024-06-04 07:15",
+            eventStart: new Date(2024, 5, 4, 7, 15),
     
-            eventEnd: "2024-06-04 08:45",
+            eventEnd: new Date(2024, 5, 4, 8, 45),
     
             status: EventStatus.PENDING
         }
@@ -107,9 +105,9 @@ describe('ensureConsistentGuestData', () => {
 
     test('enter not between event start and end', () => {
         const event = {
-            eventStart: "2024-06-04 07:15",
+            eventStart: new Date(2024, 5, 4, 7, 15),
     
-            eventEnd: "2024-06-04 08:45",
+            eventEnd: new Date(2024, 5, 4, 8, 45),
     
             status: EventStatus.PENDING
         }
@@ -130,9 +128,9 @@ describe('ensureConsistentGuestData', () => {
 
     test('exit not between event start and end', () => {
         const event = {
-            eventStart: "2024-06-04 07:15",
+            eventStart: new Date(2024, 5, 4, 7, 15),
     
-            eventEnd: "2024-06-04 08:45",
+            eventEnd: new Date(2024, 5, 4, 8, 45),
     
             status: EventStatus.PENDING
         }
@@ -153,9 +151,9 @@ describe('ensureConsistentGuestData', () => {
 
     test('enter and exit not between event start and end', () => {
         const event = {
-            eventStart: "2024-06-04 07:15",
+            eventStart: new Date(2024, 5, 4, 7, 15),
     
-            eventEnd: "2024-06-04 08:45",
+            eventEnd: new Date(2024, 5, 4, 8, 45),
     
             status: EventStatus.PENDING
         }
@@ -407,7 +405,7 @@ describe('setGuest', () => {
             updatedGuest: {
                 id: 2, eventId: 2,
                 firstname: "guest2 updated", lastname: "guest2 updated", age: 35, sex: "MALE", guest_image: "guest2_new.jpg",
-                enter: "2023-04-17 08:00", exit: "2023-04-17 08:30", is_present: GuestStatus.PRESENT
+                enter: new Date(2023,3,17,8,0), exit: new Date(2023,3,17,8,30), is_present: GuestStatus.PRESENT
             }
         }
 

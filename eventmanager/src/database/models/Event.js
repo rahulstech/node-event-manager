@@ -1,5 +1,5 @@
 const { DataTypes } = require('sequelize')
-const { enumValues, parseDateTime, formatDateTime, isDateTimeAfter } = require('../utils/helpers')
+const { enumValues, isDateTimeAfter } = require('../../utils/helpers')
 
 const EventStatus = {
 
@@ -39,13 +39,13 @@ const initEvent = ( sequelize ) => {
 
         eventStart: {
             field: 'event_start',
-            type: DataTypes.STRING(16),
+            type: DataTypes.DATE,
             allowNull: false,
         },
 
         eventEnd: {
             field: 'event_end',
-            type: DataTypes.STRING(16),
+            type: DataTypes.DATE,
             allowNull: false,
         },
 
@@ -67,11 +67,11 @@ const initEvent = ( sequelize ) => {
         timestamps: false,
         validate: {
             eventEndsAfterStart() {
-                const start = parseDateTime(this.eventStart)
-                const end = parseDateTime(this.eventEnd)
+                const start = this.eventStart
+                const end = this.eventEnd
 
                 if (!isDateTimeAfter(end, start)) {
-                    throw new Error('event end must be after event start')
+                    throw new Error('event "end" must be after event "start"')
                 }
             }
         }

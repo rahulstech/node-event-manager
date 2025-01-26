@@ -90,6 +90,14 @@ function toResponseGuest(guestModel) {
                 return null
             }
             return undefined
+        },
+        
+        valueConverter: (key, value) => {
+            if (key === 'enter' || key === 'exit') {
+                if (value !== null && value.constructor.name === 'String')
+                return new Date(value)
+            }
+            return value
         }
     })
 }

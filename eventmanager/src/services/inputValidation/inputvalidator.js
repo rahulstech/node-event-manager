@@ -1,40 +1,31 @@
 const joi = require('joi')
-
 const utils = require('../../utils/helpers')
-
 const { AppError } = require('../../utils/errors')
-
-const { isDate } = require('node:util/types')
-
-class InputValidationError extends AppError {
-
-    constructor(reason) {
-        super(reason, 400)
-    }
-}
 
 const validate = async ( schema, value, options = { abortEarly: false, allowUnknown: true } ) => {
      try {
-
         const compiled = joi.compile(schema).messages({
             'datetime': "{{ #reason }}"
         })
-
-        const validValue = await schema.validateAsync(value, options)
+        const validValue = await compiled.validateAsync(value, options)
         return validValue
      }
      catch(err) {
         if (err instanceof joi.ValidationError) {
-
             const message = JSON.stringify(err.details.map( d => d.message ))
-
-            throw new InputValidationError(message)
+            throw new AppError(message, 400)
+        }
+        else {
+            throw err
         }
      }
 }
 
 const getJoiCustomDateTimeRule = () => (value, helpers) => {
-
+    if (value === undefined || null === value) {
+        return value
+    }
+    
     try {
         const validValue = utils.parseDateTime(value)
         return validValue
@@ -45,10 +36,5 @@ const getJoiCustomDateTimeRule = () => (value, helpers) => {
 }
 
 module.exports = {
-
-    InputValidationError,
-
-    getJoiCustomDateTimeRule,
-
-    validate
+    getJoiCustomDateTimeRule, validate
 }

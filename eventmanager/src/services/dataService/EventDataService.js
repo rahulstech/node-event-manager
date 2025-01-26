@@ -14,20 +14,23 @@ const logger = loggers.logger.child({ module: 'EventDataServie' })
 function toEventValues( data ) {
     return renameKeys([
         ['start', 'eventStart'], ['end', 'eventEnd']
-    ], data, {
-        valueConverter: ( key, value ) => {
-            if (key === 'eventStart' || key === 'eventEnd') {
-                return formatDateTime(value)
-            }
-            return value
-        }
-    })
+    ], data)
 }
 
 function toResponseEvent( data ) {
     return renameKeys([
         ['eventStart','start'], ['eventEnd', 'end']
-    ], data)
+    ],
+     data, {
+        valueConverter: (key, value) => {
+            if (key === 'start' || key === 'end') {
+                if (value.constructor.name === 'String') {
+                    return new Date(value)
+                }
+            }
+            return value
+        }
+     })
 }
 
 //////////////////////////////////////////////
@@ -85,6 +88,7 @@ const filterEvents = async ({ k, status, venu, organizer }) => {
     
     const rawEvents = await Event.findAll({
         raw: true,
+        exclude: ['eventStart', 'eventEnd'],
         where: {
             [Op.and]: filters
         }
