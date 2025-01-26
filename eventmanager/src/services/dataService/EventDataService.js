@@ -1,4 +1,4 @@
-const  { EventStatus, Event } = require('../../database/eventsdb')
+const  { EventStatus, Event, captureDBErrorAsync } = require('../../database/eventsdb')
 const { Op } = require('sequelize')
 const loggers = require('../../utils/loggers')
 const { AppError } = require('../../utils/errors')
@@ -7,7 +7,11 @@ const { renameKeys, formatDateTime } = require('../../utils/helpers')
 
 const logger = loggers.logger.child({ module: 'EventDataServie' })
 
-function toServiceValues( data ) {
+//////////////////////////////////////////////
+///          Utility Methods              ///
+////////////////////////////////////////////
+
+function toEventValues( data ) {
     return renameKeys([
         ['start', 'eventStart'], ['end', 'eventEnd']
     ], data, {
@@ -26,9 +30,13 @@ function toResponseEvent( data ) {
     ], data)
 }
 
+//////////////////////////////////////////////
+///             CRUD Methods              ///
+////////////////////////////////////////////
+
 const addEvent = async ( eventData ) => {
 
-    const values = toServiceValues(eventData)
+    const values = toEventValues(eventData)
 
     const newEvent = await Event.create(values)
 
@@ -60,16 +68,29 @@ const getEventById = async ( eventId ) => {
 
 const filterEvents = async ({ k, status, venu, organizer }) => {
     
-    // TODO: complete filter events
+    const filters = []
+
+    if (k) {
+        filters.push({ title: { [Op.like]: `%${k}%`}})
+    }
+    if (venu) {
+        filters.push({ venu: { [Op.like]: `%${venu}%`}})
+    }
+    if (organizer) {
+        filters.push({ organizer: { [Op.like]: `%${organizer}%`}})
+    }
+    if (status) {
+        filters.push({ status })
+    }
     
-    const eventModels = await Event.findAll({
+    const rawEvents = await Event.findAll({
         raw: true,
         where: {
-            title: { [Op.like]: '%k%' }
+            [Op.and]: filters
         }
     })
 
-    const events = eventModels.map( eventModel => toResponseEvent(eventModel.toJSON()))
+    const events = rawEvents.map( event => toResponseEvent(event))
 
     return events
 }
@@ -96,7 +117,7 @@ const setEvent = async ( eventId, eventData ) => {
 
     // keep a copy of old event to send it later
 
-    const values = toServiceValues(eventData)
+    const values = toEventValues(eventData)
 
     await event.update(values)
 
@@ -104,5 +125,6 @@ const setEvent = async ( eventId, eventData ) => {
 }
 
 module.exports = {
+    captureDBErrorAsync,
     addEvent, getAllEvents, getEventById, filterEvents, setEvent
 }

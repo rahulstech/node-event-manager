@@ -1,6 +1,6 @@
 const { EventStatus } = require('../../../src/database/Event')
 const { sequelize, Event } = require('../../../src/database/eventsdb')
-const { addEvent, setEvent, getEventById, getAllEvents } = require('../../../src/services/dataService/EventDataService')
+const { addEvent, setEvent, getEventById, getAllEvents, filterEvents } = require('../../../src/services/dataService/EventDataService')
 
 
 const event1 = {
@@ -27,7 +27,13 @@ const event4 = {
     eventStart: "2023-08-15 14:00", eventEnd: "2023-08-15 16:00", status: "FINISHED"
 }
 
-const events = [ event1, event2, event3, event4 ]
+const event5 = {
+    id: 5,
+    title: "quater planning meeting", organizer: "Organizer C", venu: "Venu C", description: "this is quater planning meeting of organizer C",
+    eventStart: "2023-08-15 14:00", eventEnd: "2023-08-15 16:00", status: "PENDING"
+}
+
+const events = [ event1, event2, event3, event4, event5 ]
 
 beforeEach(async () => {
 
@@ -49,7 +55,7 @@ describe('addEvent', () => {
             eventStart: "2023-09-15 12:00", eventEnd: "2023-09-15 14:00", status: "PENDING"
         }
     
-        const expected = { id: 5, title: "new event", organizer: "organizer", venu: "venu", description: "event description",
+        const expected = { id: 6, title: "new event", organizer: "organizer", venu: "venu", description: "event description",
             start: "2023-09-15 12:00", end: "2023-09-15 14:00", status: EventStatus.PENDING
         }
     
@@ -89,6 +95,11 @@ test('getAllEvents', () => {
             id: 4,
             title: "my second event", organizer: "me", venu: "Berhampore", description: "this is my second organized event",
             start: "2023-08-15 14:00", end: "2023-08-15 16:00", status: "FINISHED"
+        },
+        {
+            id: 5,
+            title: "quater planning meeting", organizer: "Organizer C", venu: "Venu C", description: "this is quater planning meeting of organizer C",
+            start: "2023-08-15 14:00", end: "2023-08-15 16:00", status: "PENDING"
         }
     ]
 
@@ -112,6 +123,84 @@ describe('getEventById', () => {
             name: 'AppError',
             message: 'no event found with id 50'
         }))
+    })
+})
+
+describe('filterEvents', () => {
+
+    test('containing keyword "my"', () => {
+        const expected = [
+            {
+                id: 1,
+                title: "my first event", organizer: "me", venu: "Berhampore", description: "this is organized by me",
+                start: "2023-05-15 14:30" , end: "2023-05-15 16:00", status: "CANCELED"
+            },
+            {
+                id: 4,
+                title: "my second event", organizer: "me", venu: "Berhampore", description: "this is my second organized event",
+                start: "2023-08-15 14:00", end: "2023-08-15 16:00", status: "FINISHED"
+            }
+        ]
+
+        return expect(filterEvents({ k: 'my' })).resolves.toEqual(expected)
+    })
+
+    test('having status "PENDING"', () => {
+        const expected = [
+            {
+                id: 2,
+                title: "annual general event", organizer: "organizer A", venu: "Kandi", description: "this is annual event of organizer A",
+                start: "2023-04-17 07:30", end: "2023-04-17 09:30", status: "PENDING"
+            },
+            {
+                id: 5,
+                title: "quater planning meeting", organizer: "Organizer C", venu: "Venu C", description: "this is quater planning meeting of organizer C",
+                start: "2023-08-15 14:00", end: "2023-08-15 16:00", status: "PENDING"
+            }
+        ]
+
+        return expect(filterEvents({ status: 'PENDING' })).resolves.toEqual(expected)
+    })
+
+    test('organized by "me"', () => {
+        const expected = [
+            {
+                id: 1,
+                title: "my first event", organizer: "me", venu: "Berhampore", description: "this is organized by me",
+                start: "2023-05-15 14:30" , end: "2023-05-15 16:00", status: "CANCELED"
+            },
+            {
+                id: 4,
+                title: "my second event", organizer: "me", venu: "Berhampore", description: "this is my second organized event",
+                start: "2023-08-15 14:00", end: "2023-08-15 16:00", status: "FINISHED"
+            }
+        ]
+
+        return expect(filterEvents({ organizer: 'me' })).resolves.toEqual(expected)
+    })
+
+    test('venu at "Salar"', () => {
+        const expected = [
+            {
+                id: 3,
+                title: "quaterly general event", organizer: "organizer B", venu: "Salar", description: "this is quaterly event of organizer B",
+                start: "2023-04-30 12:00", end: "2023-04-30 15:00", status: "RUNNING"
+            }
+        ]
+
+        return expect(filterEvents({ venu: 'Salar' })).resolves.toEqual(expected)
+    })
+
+    test('venu at "Kandi" and status "PENDING"', () => {
+        const expected = [
+            {
+                id: 2,
+                title: "annual general event", organizer: "organizer A", venu: "Kandi", description: "this is annual event of organizer A",
+                start: "2023-04-17 07:30", end: "2023-04-17 09:30", status: "PENDING"
+            }
+        ]
+
+        return expect(filterEvents({ status: 'PENDING', venu: 'Kandi' })).resolves.toEqual(expected)
     })
 })
 

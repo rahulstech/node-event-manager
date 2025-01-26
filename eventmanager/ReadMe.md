@@ -177,16 +177,6 @@ For data storage json files are used. Each event data with guest list is stoted 
         "code": 200,
         "message": "successful",
         "data": {
-            "event": {
-                "id": 1,
-                "title": "event1",
-                "description": "this is the description of event1",
-                "organizer": "organizer1",
-                "venu": "venu2",
-                "start": "2023-05-15 14:30",
-                "end": "2023-05-15 16:00",
-                "status": "CANCELED"
-            },
             "guests": [
                 {
                     "id": 1,
@@ -314,16 +304,6 @@ For data storage json files are used. Each event data with guest list is stoted 
         "code": 200,
         "message": "successful",
         "data": {
-            "event": {
-                "id": 1,
-                "title": "event1",
-                "description": "this is the description of event1",
-                "organizer": "organizer1",
-                "venu": "venu2",
-                "start": "2023-05-15 14:30",
-                "end": "2023-05-15 16:00",
-                "status": "CANCELED"
-            },
             "guests": [
                 {
                     "id": 1,

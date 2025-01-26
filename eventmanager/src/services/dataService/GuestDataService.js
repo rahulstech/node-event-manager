@@ -1,11 +1,15 @@
 const { Op } = require('sequelize')
-const { Guest, Event, EventStatus, GuestStatus } = require('../../database/eventsdb')
+const { Guest, Event, EventStatus, GuestStatus, captureDBErrorAsync } = require('../../database/eventsdb')
 const loggers = require('../../utils/loggers')
-const { isDateTimeBetween, renameKeys, formatDateTime, parseDateTime } = require('../../utils/helpers')
+const { isDateTimeBetween, parseDateTime, renameKeys, formatDateTime } = require('../../utils/helpers')
 const { AppError } = require('../../utils/errors')
 
-
 const logger = loggers.logger.child({ module: 'GuestDataService' })
+
+
+//////////////////////////////////////////////
+///          Utility Methods              ///
+////////////////////////////////////////////
 
 function ensureEventStatus( { status } ) {
 
@@ -54,7 +58,8 @@ function ensureConsistentGuestData( event, guestData ) {
     }
 }
 
-function toServiceValues(guestData) {
+
+function toGuestValues(guestData) {
     return renameKeys([
         ['guest_image', 'guestImage'],
         ['enter', 'guestEnter'], ['exit', 'guestExit'], ['is_present', 'isPresent']
@@ -120,7 +125,7 @@ const addGuest = async ( eventId, guestData ) => {
 
     ensureConsistentGuestData(event, guestData)
 
-    const values = toServiceValues(guestData)
+    const values = toGuestValues(guestData)
 
     removeEnterExitIfNotPresent(values)
 
@@ -189,7 +194,7 @@ const setGuest = async ( guestId, guestData ) => {
 
     const oldGuest = { ...guest.toJSON() }
 
-    const values = toServiceValues(guestData)
+    const values = toGuestValues(guestData)
 
     removeEnterExitIfNotPresent(values)
 
@@ -218,6 +223,6 @@ const removeGuest = async ( guestId ) => {
 }
 
 module.exports = {
-    ensureConsistentGuestData,
+    captureDBErrorAsync, ensureConsistentGuestData,
     addGuest, getAllGuestsForEvent, searchGuestForEvent, getGuestById,setGuest,removeGuest,
 }

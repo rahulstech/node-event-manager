@@ -1,16 +1,10 @@
-const loggers = require('../../utils/loggers')
-
-const { getEventById } = require('../../services/dataService/EventDataService')
-
-const guestDataService = require('../../services/dataService/GuestDataService')
-
 const { removeGuestImage } = require('../../services/fileService/GuestImageService')
 const { AppError } = require('../../utils/errors')
-
-const { resolve } = require('node:path')
-
+const path = require('node:path')
 const { existsSync } = require('node:fs')
-
+const guestDataService = require('../../services/dataService/GuestDataService')
+const { captureDBErrorAsync } = guestDataService
+const loggers = require('../../utils/loggers')
 
 
 const logger = loggers.logger.child({ module: 'GuestApiController'})
@@ -22,7 +16,7 @@ const addGuestForEvent = async (req, res) => {
 
     const { guestData } = req.validBody
 
-    const newGuest = await guestDataService.addGuest(eventId, guestData)
+    const newGuest = await captureDBErrorAsync( guestDataService.addGuest(eventId, guestData))
 
     res.status(200).json({ code: 200, message: 'guest added', data: newGuest })
 }
@@ -32,12 +26,10 @@ const addGuestForEvent = async (req, res) => {
 const getAllGuestsForEvent = async (req, res) => {
    
     const { eventId } = req.validParams
-    
-    const event = await getEventById(eventId)
 
-    const guests = await guestDataService.getAllGuestsForEvent(eventId)
+    const guests = await captureDBErrorAsync( guestDataService.getAllGuestsForEvent(eventId))
 
-    res.status(200).json({ code: 200, message: 'successful', data: { event, guests }})
+    res.status(200).json({ code: 200, message: 'successful', data: { guests }})
 }
 
 const searchEventGuests = async (req, res) => {
@@ -46,18 +38,16 @@ const searchEventGuests = async (req, res) => {
 
     const { eventId } = req.validParams
 
-    const event = await getEventById(eventId)
+    const guests = await captureDBErrorAsync( guestDataService.searchGuestForEvent(eventId, { k }))
 
-    const guests = await guestDataService.searchGuestForEvent(eventId, { k })
-
-    res.status(200).json({ code: 200, message: 'successful', data: { event, guests }})
+    res.status(200).json({ code: 200, message: 'successful', data: { guests }})
 }
 
 const getGuestById = async (req, res) => {
 
     const { guestId } = req.validParams
 
-    const guest = await guestDataService.getGuestById(guestId)
+    const guest = await captureDBErrorAsync( guestDataService.getGuestById(guestId))
 
     res.status(200).json({ code: 200, message: 'successful', data: guest})
 }
@@ -70,7 +60,7 @@ const updateGuest = async (req, res) => {
 
     const { guestData } = req.validBody
 
-    const { oldGuest, updatedGuest } = await guestDataService.setGuest(guestId, guestData)
+    const { oldGuest, updatedGuest } = await captureDBErrorAsync( guestDataService.setGuest(guestId, guestData))
 
     removeGuestImage(oldGuest.guest_image )
 
@@ -83,9 +73,7 @@ const removeGuest = async (req, res) => {
 
     const { guestId } = req.validParams
 
-    const guest = await guestDataService.getGuestById(guestId)
-
-    await guestDataService.removeGuest(guestId)
+    const guest = await captureDBErrorAsync(guestDataService.removeGuest(guestId))
 
     removeGuestImage(guest.guest_image)
     
@@ -99,7 +87,7 @@ const getGuestImage = async ( req, res) => {
     const { guestImage } = req.params
 
     try {
-        const guest_image_path = resolve(process.env.GUESTS_IMAGE_STORE, guestImage)
+        const guest_image_path = path.resolve(process.env.GUESTS_IMAGE_STORE, guestImage)
         if (existsSync(guest_image_path)){ 
             res.status(200).sendFile(guest_image_path)
         }
