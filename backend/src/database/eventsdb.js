@@ -3,7 +3,7 @@ const { Sequelize, DatabaseError, ValidationError } = require('sequelize')
 const { AppError } = require('../utils/errors')
 const { initEvent, EventStatus } = require('./models/Event')
 const { initGuest, Sex, GuestStatus } = require('./models/Guest')
-const config = require('./config/eventsdb.config')
+const config = require('../../config/eventsdb.config')
 const loggers = require('../utils/loggers')
 
 const logger = loggers.logger.child({ module: 'EventsDB' })

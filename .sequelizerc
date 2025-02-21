@@ -1,9 +1,10 @@
 const { resolve, join } = require('node:path')
 
-const base = resolve(__dirname, 'src', 'database')
+const base = resolve(__dirname, 'eventmanager')
 
 module.exports = {
     config: join(base, 'config'),
-    'models-path': join(base, 'models'),
+    'models-path': join(base, 'src', 'models'),
     'migrations-path': join(base, 'migrations'),
+    'seeders-path': join(base, 'seeders'),
 }

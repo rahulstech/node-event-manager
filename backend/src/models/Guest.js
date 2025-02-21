@@ -1,5 +1,5 @@
 const { DataTypes } = require('sequelize')
-const { enumValues, isDateTimeAfter } = require('../../utils/helpers')
+const { enumValues, isDateTimeAfter } = require('../utils/helpers')
 
 const Sex = {
 
